@@ -2,103 +2,171 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ProgramCourse;
 use Illuminate\Http\Request;
 use App\Models\Program;
+use App\Models\Course;
 use Validator;
+
 class ProgramController extends Controller
 {
-    public function index(){
-        $programs=Program::all();
+    //list all programs
+    public function index()
+    {
+        $programs = Program::all();
 
-        $data=[
-            'status'=>200,
-            'programs'=>$programs
+        $data = [
+            'status' => 200,
+            'programs' => $programs
         ];
 
-        return response()->json($data,200);
+        return response()->json($data, 200);
     }
 
-    public function store(Request $request){
-
-        $validator=Validator::make($request->all(),[
-            'name'=>'required',
-            'description'=>'required'
+    //create and save new program
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required',
+            'description' => 'required'
         ]);
 
-        if($validator->fails()){
-            $data=[
-                'status'=>422,
-                'message'=>$validator->messages()
+        if ($validator->fails()) {
+            $data = [
+                'status' => 422,
+                'message' => $validator->messages()
             ];
 
-            return response()->json($data,422);
-        }
-        else{
-            $program=new Program;
+            return response()->json($data, 422);
+        } else {
+            $program = new Program;
 
-            $program->name=$request->name;
-            $program->description=$request->description;
-            $program->price=$request->price;
-            $program->photo=$request->photo;
-            $program->creator=$request->creator;
-            $program->enabled=$request->enabled;
+            $program->name = $request->name;
+            $program->description = $request->description;
+            $program->price = $request->price;
+            $program->photo = $request->photo;
+            $program->creator = $request->creator;
+            $program->enabled = $request->enabled;
 
             $program->save();
 
-            $data=[
-                'status'=>200,
-                'message'=>'Program created successfully'
+            $data = [
+                'status' => 200,
+                'message' => 'Program created successfully'
             ];
 
-            return response()->json($data,200);
+            return response()->json($data, 200);
         }
     }
 
-    public function edit(Request $request, $id){
+    //Update program detais
+    public function update(Request $request, $id)
+    {
 
-        $validator=Validator::make($request->all(),[
-            'name'=>'required',
-            'description'=>'required'
+        $validator = Validator::make($request->all(), [
+            'name' => 'required',
+            'description' => 'required'
         ]);
 
-        if($validator->fails()){
-            $data=[
-                'status'=>422,
-                'message'=>$validator->messages()
+        if ($validator->fails()) {
+            $data = [
+                'status' => 422,
+                'message' => $validator->messages()
             ];
 
-            return response()->json($data,422);
-        }
-        else{
-            $program=Program::find($id);
+            return response()->json($data, 422);
+        } else {
+            $program = Program::find($id);
 
-            $program->name=$request->name;
-            $program->description=$request->description;
-            $program->price=$request->price;
-            $program->photo=$request->photo;
-            $program->creator=$request->creator;
-            $program->enabled=$request->enabled;
+            if ($program == null) {
+                $data = [
+                    'status' => 421,
+                    'message' => 'This program does not exist.'
+                ];
 
-            $program->save();
+                return response()->json($data, 421);
+            } else {
+                $program->name = $request->name;
+                $program->description = $request->description;
+                $program->price = $request->price;
+                $program->photo = $request->photo;
+                $program->creator = $request->creator;
+                $program->enabled = $request->enabled;
 
-            $data=[
-                'status'=>200,
-                'message'=>'Program updated successfully'
-            ];
+                $program->save();
 
-            return response()->json($data,200);
+                $data = [
+                    'status' => 200,
+                    'message' => 'Program updated successfully'
+                ];
+
+                return response()->json($data, 200);
+            }
         }
     }
 
-    public function delete($id){
-        $program=Program::find($id);
-        $program->delete();
+    //Delete program
+    public function destroy($id)
+    {
+        $program = Program::find($id);
 
-        $data=[
-            'status'=>200,
-            'message'=>'Program deleted successfully'
-        ];
+        if ($program == null) {
+            $data = [
+                'status' => 421,
+                'message' => 'This program does not exist.'
+            ];
 
-        return response()->json($data,200);
+            return response()->json($data, 421);
+        } else {
+            $program->delete();
+
+            $data = [
+                'status' => 200,
+                'message' => 'Program deleted successfully'
+            ];
+
+            return response()->json($data, 200);
+        }
+    }
+
+    // Add a programe course
+    public function addProgramCourse(Request $request)
+    {
+        $course = Course::find($request->courseId);
+        $program = Program::find($request->programId);
+
+        if ($course == null) {
+            $data = [
+                'status' => 404,
+                'message' => 'Course not found'
+            ];
+            return response()->json($data, 404);
+        } else if ($program == null) {
+            $data = [
+                'status' => 404,
+                'message' => 'Program not found'
+            ];
+            return response()->json($data, 404);
+        } else {
+            $programCourse = new ProgramCourse();
+
+            $programCourse->courseId = $request->courseId;
+            $programCourse->programId = $request->programId;
+
+            $programCourse->save();
+
+            $data = [
+                'status' => 200,
+                'message' => 'Course successfully added'
+            ];
+
+            return response()->json($data, 200);
+        }
+    }
+
+    // delete a program course
+    public function removeProgramCourse($courseId, $programId){
+        $programCourse = ProgramCourse::where('programId',$programId)->where('courseId', $courseId);
+        $programCourse->delete();        
     }
 }
