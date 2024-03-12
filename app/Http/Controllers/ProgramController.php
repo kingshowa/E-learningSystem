@@ -165,8 +165,28 @@ class ProgramController extends Controller
     }
 
     // delete a program course
-    public function removeProgramCourse($courseId, $programId){
-        $programCourse = ProgramCourse::where('programId',$programId)->where('courseId', $courseId);
-        $programCourse->delete();        
+    public function removeProgramCourse($courseId, $programId)
+    {
+        $programCourse = ProgramCourse::where('programId', $programId)->where('courseId', $courseId);
+        if ($programCourse == null) {
+            $data = [
+                'status' => 404,
+                'message' => 'Parameters error'
+            ];
+            return response()->json($data, 404);
+        } else if ($programCourse->delete()) {
+            $data = [
+                'status' => 200,
+                'message' => 'Course successfully removed from this program'
+            ];
+
+            return response()->json($data, 200);
+        } else {
+            $data = [
+                'status' => 404,
+                'message' => 'Something else'
+            ];
+            return response()->json($data, 404);
+        }
     }
 }

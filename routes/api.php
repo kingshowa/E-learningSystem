@@ -27,6 +27,7 @@ Route::post('program', [ProgramController::class,'store']);
 Route::put('program/edit/{id}', [ProgramController::class,'update']);
 Route::delete('program/delete/{id}', [ProgramController::class,'destroy']);
 Route::post('program/add/course', [ProgramController::class,'addProgramCourse']);
+Route::delete('program/delete/{courseId}/{programId}', [ProgramController::class,'removeProgramCourse']);
 
 //course
 Route::get('courses', [CourseController::class,'index']);
