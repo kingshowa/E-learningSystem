@@ -168,13 +168,7 @@ class ProgramController extends Controller
     public function removeProgramCourse($courseId, $programId)
     {
         $programCourse = ProgramCourse::where('programId', $programId)->where('courseId', $courseId);
-        if ($programCourse == null) {
-            $data = [
-                'status' => 404,
-                'message' => 'Parameters error'
-            ];
-            return response()->json($data, 404);
-        } else if ($programCourse->delete()) {
+        if ($programCourse->delete()) {
             $data = [
                 'status' => 200,
                 'message' => 'Course successfully removed from this program'
@@ -184,9 +178,30 @@ class ProgramController extends Controller
         } else {
             $data = [
                 'status' => 404,
-                'message' => 'Something else'
+                'message' => 'Parameters error'
             ];
             return response()->json($data, 404);
+        }
+    }
+
+    // List all courses in a particular program
+    public function listProgramCourses($programId)
+    {
+        $programCourses = Course::join('program_courses', 'courses.id', '=', 'program_courses.courseId')
+            ->where('program_courses.id', $programId)->get();
+
+        if ($programCourses->isEmpty()) {
+            $data = [
+                'status' => 404,
+                'message' => 'There are no courses in this program, add new course!'
+            ];
+            return response()->json($data, 404);
+        } else {
+            $data = [
+                'status' => 200,
+                'programCourses' => $programCourses
+            ];
+            return response()->json($data, 200);
         }
     }
 }
