@@ -8,30 +8,27 @@ use Validator;
 
 class CourseController extends Controller
 {
-    // List all available courses
+    // List all courses ready to be used by students
     public function index()
     {
-        $courses = Course::all();
+        $courses = Course::where("enabled", true)->get();;
 
         if ($courses->count() == 0) {
             $data = [
                 'status' => 400,
                 'message' => 'No available courses'
             ];
-
             return response()->json($data, 400);
-
         } else {
             $data = [
                 'status' => 200,
                 'courses' => $courses
             ];
-
             return response()->json($data, 200);
         }
     }
 
-    // Get a course with id
+    // Get a course by id
     public function getCourseById($id)
     {
         $course = Course::find($id);
@@ -43,7 +40,6 @@ class CourseController extends Controller
             ];
             return response()->json($data, 400);
         } else {
-
             $data = [
                 'status' => 200,
                 'course' => $course
