@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Course;
+use App\Models\Module;
+use App\Models\CourseModule;
 use Validator;
 
 class CourseController extends Controller
@@ -11,7 +13,8 @@ class CourseController extends Controller
     // List all courses ready to be used by students
     public function index()
     {
-        $courses = Course::where("enabled", true)->get();;
+        $courses = Course::where("enabled", true)->get();
+        ;
 
         if ($courses->count() == 0) {
             $data = [
@@ -48,6 +51,60 @@ class CourseController extends Controller
         }
     }
 
+    // Get admin/teacher courses: can be deleted or not, enabled or not, supervised courses, created, assigned to
+    // must use sessions to get admin and tr ids
+    public function manageCourses(Request $request)
+    {
+        // only for production
+        if (isset($_SESSION['admin'])) {
+            $user = $_SESSION['admin'];
+        } else if (isset($_SESSION['teacher'])) {
+            $user = $_SESSION['teacher'];
+        } else {
+            $data = [
+                'status' => 400,
+                'message' => 'User not connected'
+            ];
+            return response()->json($data, 400);
+        }
+
+        if ($request->has('deleted')) {
+            // deleted courses for a user
+            $courses = Course::onlyTrashed()->where('creator', $user)->get();
+        } else if ($request->has('supervise')) {
+            // Admin gets courses of the teachers he supervises
+            $courses = Course::join('users', 'courses.creator', '=', 'users.id')->where('supervisor', $user)->get();
+        } else {
+            // Get courses assigned to the user and courses created by user: teacher or admin
+            $courses = Course::where('creator', $user)->orWhere('assigned_to', $user)->get();
+        }
+        $data = [
+            'status' => 200,
+            'courses' => $courses
+        ];
+        return response()->json($data, 200);
+    }
+
+    //List of enrolled courses by a student
+    public function enrolledCourses(){
+        // only for production
+        if (isset($_SESSION['student'])) {
+            $user = $_SESSION['student'];
+        } else {
+            $data = [
+                'status' => 400,
+                'message' => 'User not connected'
+            ];
+            return response()->json($data, 400);
+        }
+        $courses = Course::join('enrollments', 'courses.id', '=', 'enrollments.courseId')->where('studentId', $user)->get();
+        $data = [
+            'status' => 200,
+            'courses' => $courses
+        ];
+        return response()->json($data, 200);
+    }
+
     // Create a new course
     public function store(Request $request)
     {
@@ -73,6 +130,7 @@ class CourseController extends Controller
             $course->level = $request->level;
             $course->photo = $request->photo;
             $course->creator = $request->creator;
+            $course->assigned_to = $request->assigned_to;
             $course->completed = $request->completed;
             $course->enabled = $request->enabled;
 
@@ -124,6 +182,8 @@ class CourseController extends Controller
                 $course->level = $request->level;
                 $course->photo = $request->photo;
                 $course->creator = $request->creator;
+                $course->assigned_to = $request->assigned_to;
+                $course->completed = $request->completed;
                 $course->enabled = $request->enabled;
 
                 $course->save();
@@ -133,6 +193,45 @@ class CourseController extends Controller
                     'message' => 'Course updated successfully'
                 ];
 
+                return response()->json($data, 200);
+            }
+        }
+    }
+
+    //Update course status: enable/disable
+    public function updateStatus(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'enabled' => 'required'
+        ]);
+
+        if ($validator->fails()) {
+            $data = [
+                'status' => 422,
+                'message' => $validator->messages()
+            ];
+
+            return response()->json($data, 422);
+        } else {
+            $course = Course::find($id);
+
+            if ($course == null) {
+                $data = [
+                    'status' => 421,
+                    'message' => 'This course does not exist.'
+                ];
+                return response()->json($data, 421);
+            } else {
+                $status = 'enabled';
+                if ($request->enabled == 0)
+                    $status = 'disabled';
+
+                $course->enabled = $request->enabled;
+                $course->save();
+                $data = [
+                    'status' => 200,
+                    'message' => 'Course ' . $status . ' successfully'
+                ];
                 return response()->json($data, 200);
             }
         }
@@ -161,5 +260,101 @@ class CourseController extends Controller
         }
     }
 
+
+
+    // Restore deleted course
+    public function restoreCourse($id)
+    {
+        $course = Course::onlyTrashed()->find($id);
+        if ($course != null) {
+            $course->restore();
+            $data = [
+                'status' => 200,
+                'message' => 'Course successfully restored'
+            ];
+            return response()->json($data, 200);
+        } else {
+            $data = [
+                'status' => 400,
+                'message' => 'Course not found'
+            ];
+            return response()->json($data, 400);
+        }
+    }
+
+    // Add a course module
+    public function addCourseModule(Request $request)
+    {
+        $course = Course::find($request->courseId);
+        $module = Module::find($request->moduleId);
+
+        if ($course == null) {
+            $data = [
+                'status' => 404,
+                'message' => 'Course not found'
+            ];
+            return response()->json($data, 404);
+        } else if ($module == null) {
+            $data = [
+                'status' => 404,
+                'message' => 'Module not found'
+            ];
+            return response()->json($data, 404);
+        } else {
+            $courseModule = new CourseModule();
+
+            $courseModule->courseId = $request->courseId;
+            $courseModule->moduleId = $request->moduleId;
+
+            $courseModule->save();
+
+            $data = [
+                'status' => 200,
+                'message' => 'Module successfully added'
+            ];
+            return response()->json($data, 200);
+        }
+    }
+
+    // Delete a course module
+    public function removeCourseModule($courseId, $moduleId)
+    {
+        $courseModule = CourseModule::where('moduleId', $moduleId)->where('courseId', $courseId);
+        if ($courseModule->delete()) {
+            $data = [
+                'status' => 200,
+                'message' => 'Module successfully removed from this course'
+            ];
+
+            return response()->json($data, 200);
+        } else {
+            $data = [
+                'status' => 404,
+                'message' => 'Parameters error'
+            ];
+            return response()->json($data, 404);
+        }
+    }
+
+    // List all modules in a particular course
+    public function listCourseModules($courseId)
+    {
+        $courseModules = Module::join('course_modules', 'modules.id', '=', 'course_modules.moduleId')
+            ->where('course_modules.courseId', $courseId)->get();
+
+        if ($courseModules->isEmpty()) {
+            $data = [
+                'status' => 404,
+                'message' => 'There are no modules in this program, add new course!'
+            ];
+            return response()->json($data, 404);
+        } else {
+            $data = [
+                'status' => 200,
+                'courseModules' => $courseModules
+            ];
+            return response()->json($data, 200);
+        }
+    }
 
 }

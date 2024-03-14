@@ -21,6 +21,11 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+//Only for production
+//$_SESSION['admin']=1;
+//$_SESSION['teacher']=2;
+$_SESSION['student']=3;
+
 //program
 Route::get('programs', [ProgramController::class,'index']);
 Route::get('program/{id}', [ProgramController::class,'getProgramById']);
@@ -37,9 +42,16 @@ Route::get('program/courses/{id}', [ProgramController::class,'listProgramCourses
 //course
 Route::get('courses', [CourseController::class,'index']);
 Route::get('course/{id}', [CourseController::class,'getCourseById']);
+Route::get('courses/manage', [CourseController::class,'manageCourses']);
+Route::get('courses/enrolled', [CourseController::class,'enrolledCourses']);
+Route::get('course/restore/{id}', [CourseController::class,'restoreCourse']); // retrieves deleted course
 Route::post('course', [CourseController::class,'store']);
 Route::put('course/edit/{id}', [CourseController::class,'update']);
+Route::put('course/enable/{id}', [CourseController::class,'updateStatus']);
 Route::delete('course/delete/{id}', [CourseController::class,'destroy']);
+Route::post('course/add/module', [CourseController::class,'addCourseModule']);
+Route::delete('course/delete/{courseId}/{moduleId}', [CourseController::class,'removeCourseModule']);
+Route::get('course/modules/{id}', [CourseController::class,'listCourseModules']);
 
 //module
 Route::get('modules', [ModuleController::class,'index']);
