@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('photo')->nullable();
             $table->date('date_of_birth')->nullable();
             $table->string('role')->nullable();
+            $table->foreignId('supervisor')->nullable(); //newly added
             $table->boolean('enabled')->default(false);
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();

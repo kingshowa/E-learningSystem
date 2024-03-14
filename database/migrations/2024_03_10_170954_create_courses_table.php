@@ -20,7 +20,9 @@ return new class extends Migration
             $table->double('price')->nullable();
             $table->string('photo')->nullable();
             $table->foreignId('creator')->nullable();
-            $table->boolean('enabled')->default(false);
+            $table->foreignId('assigned_to')->nullable();
+            $table->boolean('completed')->default(false)->nullable();
+            $table->boolean('enabled')->default(false)->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

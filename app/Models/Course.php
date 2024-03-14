@@ -18,6 +18,8 @@ class Course extends Model
         'price',
         'photo',
         'creator',
+        'assigned_to',
+        'completed',
         'enabled',
     ];
 }

@@ -8,23 +8,55 @@ use Validator;
 
 class CourseController extends Controller
 {
+    // List all available courses
     public function index()
     {
         $courses = Course::all();
 
-        $data = [
-            'status' => 200,
-            'courses' => $courses
-        ];
+        if ($courses->count() == 0) {
+            $data = [
+                'status' => 400,
+                'message' => 'No available courses'
+            ];
 
-        return response()->json($data, 200);
+            return response()->json($data, 400);
+
+        } else {
+            $data = [
+                'status' => 200,
+                'courses' => $courses
+            ];
+
+            return response()->json($data, 200);
+        }
     }
 
+    // Get a course with id
+    public function getCourseById($id)
+    {
+        $course = Course::find($id);
+
+        if ($course == null) {
+            $data = [
+                'status' => 400,
+                'message' => 'Course not found'
+            ];
+            return response()->json($data, 400);
+        } else {
+
+            $data = [
+                'status' => 200,
+                'course' => $course
+            ];
+            return response()->json($data, 200);
+        }
+    }
+
+    // Create a new course
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required',
-            'enabled' => 'required',
             'description' => 'required'
         ]);
 
@@ -45,16 +77,22 @@ class CourseController extends Controller
             $course->level = $request->level;
             $course->photo = $request->photo;
             $course->creator = $request->creator;
+            $course->completed = $request->completed;
             $course->enabled = $request->enabled;
 
-            $course->save();
-
-            $data = [
-                'status' => 200,
-                'message' => 'Course created successfully'
-            ];
-
-            return response()->json($data, 200);
+            if ($course->save()) {
+                $data = [
+                    'status' => 200,
+                    'message' => 'Course created successfully'
+                ];
+                return response()->json($data, 200);
+            } else {
+                $data = [
+                    'status' => 423,
+                    'message' => 'Store failure'
+                ];
+                return response()->json($data, 423);
+            }
         }
     }
 
@@ -62,7 +100,6 @@ class CourseController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required',
-            'enabled' => 'required',
             'description' => 'required'
         ]);
 
@@ -128,5 +165,5 @@ class CourseController extends Controller
         }
     }
 
-    
+
 }
