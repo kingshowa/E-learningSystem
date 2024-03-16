@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Enrollment;
 use Illuminate\Http\Request;
 use App\Models\Course;
 use App\Models\Module;
@@ -14,7 +15,6 @@ class CourseController extends Controller
     public function index()
     {
         $courses = Course::where("enabled", true)->get();
-        ;
 
         if ($courses->count() == 0) {
             $data = [
@@ -51,11 +51,10 @@ class CourseController extends Controller
         }
     }
 
-    // Get admin/teacher courses: can be deleted or not, enabled or not, supervised courses, created, assigned to
-    // must use sessions to get admin and tr ids
+    // Get admin/teacher courses: can be deleted or not, supervised courses, created, assigned to
     public function manageCourses(Request $request)
     {
-        // only for production
+        // verify connection
         if (isset($_SESSION['admin'])) {
             $user = $_SESSION['admin'];
         } else if (isset($_SESSION['teacher'])) {
@@ -73,7 +72,10 @@ class CourseController extends Controller
             $courses = Course::onlyTrashed()->where('creator', $user)->get();
         } else if ($request->has('supervise')) {
             // Admin gets courses of the teachers he supervises
-            $courses = Course::join('users', 'courses.creator', '=', 'users.id')->where('supervisor', $user)->get();
+            $courses = Course::select('courses.*')
+                ->join('users', 'courses.creator', '=', 'users.id')
+                ->where('users.supervisor', '=', $user)
+                ->get();
         } else {
             // Get courses assigned to the user and courses created by user: teacher or admin
             $courses = Course::where('creator', $user)->orWhere('assigned_to', $user)->get();
@@ -86,23 +88,25 @@ class CourseController extends Controller
     }
 
     //List of enrolled courses by a student
-    public function enrolledCourses(){
-        // only for production
-        if (isset($_SESSION['student'])) {
-            $user = $_SESSION['student'];
-        } else {
+    public function enrolledCourses()
+    {
+        // Verify connection
+        if (!isset($_SESSION['student'])) {
             $data = [
                 'status' => 400,
                 'message' => 'User not connected'
             ];
             return response()->json($data, 400);
+        } else {
+            $courses = Course::select('courses.*')
+                ->join('enrollments', 'courses.id', '=', 'enrollments.courseId')
+                ->where('enrollments.studentId', $_SESSION['student'])->get();
+            $data = [
+                'status' => 200,
+                'courses' => $courses
+            ];
+            return response()->json($data, 200);
         }
-        $courses = Course::join('enrollments', 'courses.id', '=', 'enrollments.courseId')->where('studentId', $user)->get();
-        $data = [
-            'status' => 200,
-            'courses' => $courses
-        ];
-        return response()->json($data, 200);
     }
 
     // Create a new course
@@ -150,6 +154,7 @@ class CourseController extends Controller
         }
     }
 
+    // Update course detais
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
@@ -237,6 +242,7 @@ class CourseController extends Controller
         }
     }
 
+    // Delete a course/ archive
     public function destroy($id)
     {
         $course = Course::find($id);
@@ -259,8 +265,6 @@ class CourseController extends Controller
             return response()->json($data, 200);
         }
     }
-
-
 
     // Restore deleted course
     public function restoreCourse($id)
@@ -325,7 +329,6 @@ class CourseController extends Controller
                 'status' => 200,
                 'message' => 'Module successfully removed from this course'
             ];
-
             return response()->json($data, 200);
         } else {
             $data = [
@@ -339,7 +342,8 @@ class CourseController extends Controller
     // List all modules in a particular course
     public function listCourseModules($courseId)
     {
-        $courseModules = Module::join('course_modules', 'modules.id', '=', 'course_modules.moduleId')
+        $courseModules = Module::select('modules.*')
+            ->join('course_modules', 'modules.id', '=', 'course_modules.moduleId')
             ->where('course_modules.courseId', $courseId)->get();
 
         if ($courseModules->isEmpty()) {
@@ -354,6 +358,43 @@ class CourseController extends Controller
                 'courseModules' => $courseModules
             ];
             return response()->json($data, 200);
+        }
+    }
+
+    // Enroll into a course
+    public function registerCourse($courseId)
+    {
+        // Verify connection
+        if (!isset($_SESSION['student'])) {
+            $data = [
+                'status' => 400,
+                'message' => 'User not connected'
+            ];
+            return response()->json($data, 400);
+        } else { // register
+            $registered = Enrollment::where('studentId', $_SESSION['student'])
+                ->where('courseId', $courseId)->get();
+
+            if ($registered->isEmpty()) {
+                $enrollment = new Enrollment();
+
+                $enrollment->courseId = $courseId;
+                $enrollment->studentId = $_SESSION['student'];
+
+                $enrollment->save();
+
+                $data = [
+                    'status' => 200,
+                    'message' => 'Registration is successfull.'
+                ];
+                return response()->json($data, 200);
+            } else {
+                $data = [
+                    'status' => 401,
+                    'message' => 'Already registered in this course.'
+                ];
+                return response()->json($data, 401);
+            }
         }
     }
 

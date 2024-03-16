@@ -6,6 +6,7 @@ use App\Models\ProgramCourse;
 use Illuminate\Http\Request;
 use App\Models\Program;
 use App\Models\Course;
+use App\Models\Enrollment;
 use Validator;
 
 class ProgramController extends Controller
@@ -42,17 +43,28 @@ class ProgramController extends Controller
         }
     }
 
-    // Get admin programs: can be deleted or not, enabled or not
-    // must use sessions to get admin id
+    // Get admin programs: can be deleted or not
     public function getAdminPrograms(Request $request)
     {
-        if ($request->has('deleted')) {
-            $programs = Program::onlyTrashed()->get();
-        } else if ($request->has('enabled')) {
-            // Get a program by status: enabled/disabled
-            $programs = Program::where('enabled', $request->enabled)->get();
+        // verify connection
+        if (isset($_SESSION['admin'])) {
+            $user = $_SESSION['admin'];
+        } else if (isset($_SESSION['teacher'])) {
+            $user = $_SESSION['teacher'];
         } else {
-            $programs = Program::all();
+            $data = [
+                'status' => 400,
+                'message' => 'User not connected'
+            ];
+            return response()->json($data, 400);
+        }
+
+        if ($request->has('deleted')) {
+            // deleted programs for a user
+            $programs = Program::onlyTrashed()->where('creator', $user)->get();
+        } else {
+            // all programs created by a user
+            $programs = Program::where('creator', $user)->get();
         }
         $data = [
             'status' => 200,
@@ -289,8 +301,9 @@ class ProgramController extends Controller
     // List all courses in a particular program
     public function listProgramCourses($programId)
     {
-        $programCourses = Course::join('program_courses', 'courses.id', '=', 'program_courses.courseId')
-            ->where('program_courses.id', $programId)->get();
+        $programCourses = Course::select('courses.*')
+            ->join('program_courses', 'courses.id', '=', 'program_courses.courseId')
+            ->where('program_courses.programId', $programId)->get();
 
         if ($programCourses->isEmpty()) {
             $data = [
@@ -302,6 +315,66 @@ class ProgramController extends Controller
             $data = [
                 'status' => 200,
                 'programCourses' => $programCourses
+            ];
+            return response()->json($data, 200);
+        }
+    }
+
+    // Enroll into a program
+    public function registerProgram($programId)
+    {
+        // Verify connection
+        if (!isset($_SESSION['student'])) {
+            $data = [
+                'status' => 400,
+                'message' => 'User not connected'
+            ];
+            return response()->json($data, 400);
+        } else { // register
+            $registered = Enrollment::where('studentId', $_SESSION['student'])
+                ->where('programId', $programId)->get();
+
+            if ($registered->isEmpty()) {
+                $enrollment = new Enrollment();
+
+                $enrollment->programId = $programId;
+                $enrollment->studentId = $_SESSION['student'];
+
+                $enrollment->save();
+
+                $data = [
+                    'status' => 200,
+                    'message' => 'Registration is successfull.'
+                ];
+                return response()->json($data, 200);
+            } else {
+                $data = [
+                    'status' => 401,
+                    'message' => 'Already registered in this program.'
+                ];
+                return response()->json($data, 401);
+            }
+        }
+    }
+
+    //List of enrolled programs by a student
+    public function enrolledPrograms()
+    {
+        // Verify connection
+        if (!isset($_SESSION['student'])) {
+            $data = [
+                'status' => 400,
+                'message' => 'User not connected'
+            ];
+            return response()->json($data, 400);
+        } else {
+            $programs = Program::select('programs.*')
+                ->join('enrollments', 'programs.id', '=', 'enrollments.programId')
+                ->where('studentId', $_SESSION['student'])
+                ->get();
+            $data = [
+                'status' => 200,
+                'programs' => $programs
             ];
             return response()->json($data, 200);
         }
