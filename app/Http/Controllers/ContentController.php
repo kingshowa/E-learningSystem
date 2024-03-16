@@ -9,6 +9,7 @@ use App\Models\Image;
 use App\Models\Document;
 use App\Models\Text;
 use App\Models\Quize;
+use App\Models\Module;
 use Validator;
 
 class ContentController extends Controller
@@ -41,12 +42,20 @@ class ContentController extends Controller
             'type' => 'required'
         ]);
 
+        $module = Module::find($request->moduleId); // test 
+
         if ($validator->fails()) {
             $data = [
                 'status' => 422,
                 'message' => $validator->messages()
             ];
             return response()->json($data, 422);
+        }else if($module==null) {
+            $data = [
+                'status' => 404,
+                'message' => 'Module not found!'
+            ];
+            return response()->json($data, 404);
         } else {
 
             $content = new Content();
@@ -63,7 +72,7 @@ class ContentController extends Controller
                 if ($request->has('videoFile')) { // must put a field name='videoFile'
                     
                     $validator = Validator::make($request->all(), [
-                        'video' => 'required|mimes:mp4,mov,avi|max:2048', // Adjust max file size as needed
+                        'video' => 'required|mimes:mp4,mov,avi', //max:2048 Adjust max file size as needed
                     ]);
 
                     if ($validator->fails()) {
@@ -71,6 +80,7 @@ class ContentController extends Controller
                             'status' => 422,
                             'message' => $validator->messages()
                         ];
+                        $content->delete();
                         return response()->json($data, 422);
                     } else {
                         $path = $request->file('video')->store('videos');
@@ -85,6 +95,7 @@ class ContentController extends Controller
                             'status' => 422,
                             'message' => $validator->messages()
                         ];
+                        $content->delete();
                         return response()->json($data, 422);
                     } else {
                         $path = $request->link;
@@ -99,22 +110,50 @@ class ContentController extends Controller
                 $video->save();
             } else if ($request->type == 'image') { // create image
                 $image = new Image();
+
+                $validator = Validator::make($request->all(), [
+                    'image' => 'required|mimes:jpeg,jpg,png,tiff|max:5000', //Adjust max file size as needed
+                ]);
+
+                if ($validator->fails()) {
+                    $data = [
+                        'status' => 422,
+                        'message' => $validator->messages()
+                    ];
+                    $content->delete();
+                    return response()->json($data, 422);
+                } else {
+                    $path = $request->file('image')->store('images');
+                }
                 $image->contentId = $contentId;
-                $image->link = $request->link;
+                $image->link = $path;
                 $image->caption = $request->caption;
-                $image->optionId = $request->optionId;
                 $image->save();
             } else if ($request->type == 'document') { // create document
                 $document = new Document();
+
+                $validator = Validator::make($request->all(), [
+                    'document' => 'required|mimes:pdf,docx,xlsx,txt,pptx,xml,html', //Adjust max file size as needed
+                ]);
+
+                if ($validator->fails()) {
+                    $data = [
+                        'status' => 422,
+                        'message' => $validator->messages()
+                    ];
+                    $content->delete();
+                    return response()->json($data, 422);
+                } else {
+                    $path = $request->file('document')->store('documents');
+                }
                 $document->contentId = $contentId;
-                $document->link = $request->link;
+                $document->link = $path;
                 $document->caption = $request->caption;
                 $document->save();
             } else if ($request->type == 'text') {  // create yext
                 $text = new Text();
                 $text->contentId = $contentId;
                 $text->data = $request->data;
-                $text->optionId = $request->optionId;
                 $text->save();
             } else if ($request->type == 'quize') {  // create quize
                 $quize = new Quize();

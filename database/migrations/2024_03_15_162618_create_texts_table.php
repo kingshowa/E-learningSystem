@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('texts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('contentId')->constrained('contents')->onDelete('cascade')->nullable();
-            $table->string('data');
-            $table->foreignId('optionId')->constrained('options')->onDelete('cascade')->nullable();
+            $table->foreignId('contentId')->default(0)->nullable();
+            $table->longText('data');
+            $table->foreignId('optionId')->default(0)->nullable();
             $table->timestamps();
         });
     }

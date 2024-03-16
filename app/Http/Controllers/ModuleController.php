@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Quize;
 use Illuminate\Http\Request;
 use App\Models\Module;
+use App\Models\Content;
 use Validator;
 
 class ModuleController extends Controller
@@ -128,7 +130,7 @@ class ModuleController extends Controller
         }
     }
 
-    // Restore deleted course
+    // Restore deleted module
     public function restoreModule($id)
     {
         $module = Module::onlyTrashed()->find($id);
@@ -149,9 +151,43 @@ class ModuleController extends Controller
     }
 
 
-
     // Get module contents
-    public function getModuleContents($moduleId){
+    public function getModuleContents($moduleId)
+    {
 
+        $module = Module::find($moduleId); // test 
+
+        if ($module == null) {
+            $data = [
+                'status' => 404,
+                'message' => 'Parameter error!'
+            ];
+            return response()->json($data, 404);
+        }
+
+        $contents = Content::where('moduleId', $moduleId)->get();
+
+        $moduleContents = [];
+        foreach ($contents as $content) {
+            $contentType = Content::select($content->type . 's.*', 'contents.type')
+                ->join($content->type . 's', 'contents.id', '=', $content->type . 's.contentId')
+                ->where('contentId', $content->id)->get();
+
+            $moduleContents[] = $contentType;
+        }
+
+        if (count($moduleContents) == 0) {
+            $data = [
+                'status' => 404,
+                'message' => 'There are no contents in this module, add new content!'
+            ];
+            return response()->json($data, 404);
+        } else {
+            $data = [
+                'status' => 200,
+                'moduleContents' => $moduleContents
+            ];
+            return response()->json($data, 200);
+        }
     }
 }

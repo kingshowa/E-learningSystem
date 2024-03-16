@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::create('images', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('contenId')->constrained('contents')->onDelete('cascade')->nullable();
+            $table->foreignId('contentId')->default(0)->nullable();
             $table->string('link');
             $table->string('caption')->nullable();
-            $table->foreignId('optionId')->constrained('options')->onDelete('cascade')->nullable();
+            $table->foreignId('optionId')->default(0)->nullable();
             $table->timestamps();
         });
     }
