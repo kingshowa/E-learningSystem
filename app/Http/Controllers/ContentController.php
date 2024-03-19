@@ -11,6 +11,7 @@ use App\Models\Text;
 use App\Models\Quize;
 use App\Models\Module;
 use Validator;
+use Illuminate\Support\Facades\Storage;
 
 class ContentController extends Controller
 {
@@ -50,7 +51,7 @@ class ContentController extends Controller
                 'message' => $validator->messages()
             ];
             return response()->json($data, 422);
-        }else if($module==null) {
+        } else if ($module == null) {
             $data = [
                 'status' => 404,
                 'message' => 'Module not found!'
@@ -59,7 +60,7 @@ class ContentController extends Controller
         } else {
 
             $content = new Content();
-            $content->moduleId = $request->moduleId;
+            $content->module_id = $request->moduleId;
             $content->type = $request->type;
             $content->save();
 
@@ -70,7 +71,7 @@ class ContentController extends Controller
 
                 // when it is an uploaded file
                 if ($request->has('videoFile')) { // must put a field name='videoFile'
-                    
+
                     $validator = Validator::make($request->all(), [
                         'video' => 'required|mimes:mp4,mov,avi', //max:2048 Adjust max file size as needed
                     ]);
@@ -102,7 +103,7 @@ class ContentController extends Controller
                         $video->uploaded = false;
                     }
                 }
-                $video->contentId = $contentId;
+                $video->content_id = $contentId;
                 $video->link = $path;
                 $video->caption = $request->caption;
                 $video->start = $request->start;
@@ -125,7 +126,7 @@ class ContentController extends Controller
                 } else {
                     $path = $request->file('image')->store('images');
                 }
-                $image->contentId = $contentId;
+                $image->content_id = $contentId;
                 $image->link = $path;
                 $image->caption = $request->caption;
                 $image->save();
@@ -146,18 +147,18 @@ class ContentController extends Controller
                 } else {
                     $path = $request->file('document')->store('documents');
                 }
-                $document->contentId = $contentId;
+                $document->content_id = $contentId;
                 $document->link = $path;
                 $document->caption = $request->caption;
                 $document->save();
             } else if ($request->type == 'text') {  // create yext
                 $text = new Text();
-                $text->contentId = $contentId;
+                $text->content_id = $contentId;
                 $text->data = $request->data;
                 $text->save();
             } else if ($request->type == 'quize') {  // create quize
                 $quize = new Quize();
-                $quize->contentId = $contentId;
+                $quize->content_id = $contentId;
                 $quize->save();
             } else {
                 $data = [
@@ -175,82 +176,236 @@ class ContentController extends Controller
         }
     }
 
-    // Update module details
-    // public function update(Request $request, $id)
-    // {
-    //     $validator = Validator::make($request->all(), [
-    //         'name' => 'required'
-    //     ]);
+    // Delete content
+    public function destroy($id)
+    {
+        $content = Content::find($id);
 
-    //     if ($validator->fails()) {
-    //         $data = [
-    //             'status' => 422,
-    //             'message' => $validator->messages()
-    //         ];
-    //         return response()->json($data, 422);
-    //     } else {
-    //         $module = Module::find($id);
+        if ($content == null) {
+            $data = [
+                'status' => 421,
+                'message' => 'This content does not exist.'
+            ];
+            return response()->json($data, 421);
+        } else {
+            if ($content->type == 'video') {
+                $video = Video::select('*')->where('content_id', $content->id)->first();
+                if ($video->uploaded == 1) {
+                    // Delete the old video file from storage
+                    Storage::delete($video->link);
+                }
+            }
+            if ($content->type == 'image') {
+                $image = Image::select('*')->where('content_id', $content->id)->first();
+                Storage::delete($image->link);
+            }
+            if ($content->type == 'document') {
+                $document = Document::select('*')->where('content_id', $content->id)->first();
+                Storage::delete($document->link);
+            }
+            $content->delete();
+            $data = [
+                'status' => 200,
+                'message' => 'Content deleted successfully'
+            ];
+            return response()->json($data, 200);
+        }
+    }
 
-    //         if ($module == null) {
-    //             $data = [
-    //                 'status' => 421,
-    //                 'message' => 'This module does not exist.'
-    //             ];
-    //             return response()->json($data, 421);
-    //         } else {
-    //             $module->name = $request->name;
-    //             $module->description = $request->description;
-    //             $module->code = $request->code;
-    //             $module->duration = $request->duration;
-    //             $module->creator = $request->creator;
-    //             $module->save();
-    //             $data = [
-    //                 'status' => 200,
-    //                 'message' => 'Module updated successfully'
-    //             ];
-    //             return response()->json($data, 200);
-    //         }
-    //     }
-    // }
+    // Update video content
+    public function updateVideo(Request $request, $id)
+    {
+        $video = Video::find($id);
+        if ($video == null) {
+            $data = [
+                'status' => 404,
+                'message' => 'Content not found!'
+            ];
+            return response()->json($data, 404);
+        } else {
+            if ($video->uploaded == 1) {
+                // Delete the old video file from storage
+                Storage::delete($video->link);
+            }
 
-    // // Delete module
-    // public function destroy($id)
-    // {
-    //     $module = Module::find($id);
+            // when it is an uploaded file
+            if ($request->has('videoFile')) { // must put a field name='videoFile'
 
-    //     if ($module == null) {
-    //         $data = [
-    //             'status' => 421,
-    //             'message' => 'This module does not exist.'
-    //         ];
-    //         return response()->json($data, 421);
-    //     } else {
-    //         $module->delete();
-    //         $data = [
-    //             'status' => 200,
-    //             'message' => 'Module deleted successfully'
-    //         ];
-    //         return response()->json($data, 200);
-    //     }
-    // }
+                $validator = Validator::make($request->all(), [
+                    'video' => 'required|mimes:mp4,mov,avi', //max:2048 Adjust max file size as needed
+                ]);
 
-    // // Restore deleted course
-    // public function restoreModule($id)
-    // {
-    //     $module = Module::onlyTrashed()->find($id);
-    //     if ($module != null) {
-    //         $module->restore();
-    //         $data = [
-    //             'status' => 200,
-    //             'message' => 'Module successfully restored'
-    //         ];
-    //         return response()->json($data, 200);
-    //     } else {
-    //         $data = [
-    //             'status' => 400,
-    //             'message' => 'Module not found'
-    //         ];
-    //         return response()->json($data, 400);
-    //     }
-    // }
+                if ($validator->fails()) {
+                    $data = [
+                        'status' => 422,
+                        'message' => $validator->messages()
+                    ];
+                    return response()->json($data, 422);
+                } else {
+                    $path = $request->file('video')->store('videos');
+                    $video->uploaded = true;
+                }
+            } else { //  when it is an external link
+                $validator = Validator::make($request->all(), [
+                    'link' => 'required'
+                ]);
+                if ($validator->fails()) {
+                    $data = [
+                        'status' => 423,
+                        'message' => $validator->messages()
+                    ];
+                    return response()->json($data, 423);
+                } else {
+                    $path = $request->link;
+                    $video->uploaded = false;
+                }
+            }
+            $video->link = $path;
+            $video->caption = $request->caption;
+            $video->start = $request->start;
+            $video->end = $request->end;
+            $video->save();
+
+            $data = [
+                'status' => 200,
+                'message' => 'Video updated!'
+            ];
+            return response()->json($data, 200);
+        }
+    }
+
+    // Update image
+    public function updateImage(Request $request, $id)
+    {
+        $image = Image::find($id);
+
+        if ($image == null) {
+            $data = [
+                'status' => 404,
+                'message' => 'Content not found!'
+            ];
+            return response()->json($data, 404);
+        } else {
+            Storage::delete($image->link);
+            $validator = Validator::make($request->all(), [
+                'image' => 'required|mimes:jpeg,jpg,png,tiff|max:5000', //Adjust max file size as needed
+            ]);
+
+            if ($validator->fails()) {
+                $data = [
+                    'status' => 422,
+                    'message' => $validator->messages()
+                ];
+                return response()->json($data, 422);
+            } else {
+                $path = $request->file('image')->store('images');
+            }
+            $image->link = $path;
+            $image->caption = $request->caption;
+            $image->save();
+
+            $data = [
+                'status' => 200,
+                'message' => 'Image updated!'
+            ];
+            return response()->json($data, 200);
+        }
+    }
+
+    // Update document
+    public function updateDocument(Request $request, $id)
+    {
+        $document = Document::find($id);
+
+        if ($document == null) {
+            $data = [
+                'status' => 404,
+                'message' => 'Content not found!'
+            ];
+            return response()->json($data, 404);
+        } else {
+            Storage::delete($document->link);
+
+            $validator = Validator::make($request->all(), [
+                'document' => 'required|mimes:pdf,docx,xlsx,txt,pptx,xml,html', //Adjust max file size as needed
+            ]);
+
+            if ($validator->fails()) {
+                $data = [
+                    'status' => 422,
+                    'message' => $validator->messages()
+                ];
+                return response()->json($data, 422);
+            } else {
+                $path = $request->file('document')->store('documents');
+            }
+            $document->link = $path;
+            $document->caption = $request->caption;
+            $document->save();
+
+            $data = [
+                'status' => 200,
+                'message' => 'Document updated!'
+            ];
+            return response()->json($data, 200);
+        }
+    }
+
+    // Update text  content
+    public function updateText(Request $request, $id)
+    {
+        $text = Text::find($id);
+
+        if ($text == null) {
+            $data = [
+                'status' => 404,
+                'message' => 'Content not found!'
+            ];
+            return response()->json($data, 404);
+        } else {
+            $validator = Validator::make($request->all(), [
+                'data' => 'required', //Adjust max file size as needed
+            ]);
+
+            if ($validator->fails()) {
+                $data = [
+                    'status' => 422,
+                    'message' => $validator->messages()
+                ];
+                return response()->json($data, 422);
+            } else {
+                $text->data = $request->data;
+                $text->save();
+
+                $data = [
+                    'status' => 200,
+                    'message' => 'Text updated!'
+                ];
+                return response()->json($data, 200);
+            }
+        }
+    }
+
+    // Update quize  content
+    public function updateQuize(Request $request, $id)
+    {
+        $quize = Quize::find($id);
+
+        if ($quize == null) {
+            $data = [
+                'status' => 404,
+                'message' => 'Content not found!'
+            ];
+            return response()->json($data, 404);
+        } else {
+            $quize->instruction = $request->instruction;
+            $quize->save();
+
+            $data = [
+                'status' => 200,
+                'message' => 'Quiz updated!'
+            ];
+            return response()->json($data, 200);
+        }
+    }
 }

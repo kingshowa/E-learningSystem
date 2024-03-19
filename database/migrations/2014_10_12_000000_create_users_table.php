@@ -19,7 +19,7 @@ return new class extends Migration
             $table->date('date_of_birth')->nullable();
             $table->string('role')->nullable();
             $table->foreignId('supervisor')->nullable();
-            $table->boolean('enabled')->default(false);
+            $table->boolean('enabled')->default(true);
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');

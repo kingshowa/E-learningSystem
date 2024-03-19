@@ -47,10 +47,8 @@ class ProgramController extends Controller
     public function getAdminPrograms(Request $request)
     {
         // verify connection
-        if (isset($_SESSION['admin'])) {
+        if (isset ($_SESSION['admin'])) {
             $user = $_SESSION['admin'];
-        } else if (isset($_SESSION['teacher'])) {
-            $user = $_SESSION['teacher'];
         } else {
             $data = [
                 'status' => 400,
@@ -76,6 +74,17 @@ class ProgramController extends Controller
     //create and save new program
     public function store(Request $request)
     {
+        // verify connection
+        if (isset ($_SESSION['admin'])) {
+            $user = $_SESSION['admin'];
+        } else {
+            $data = [
+                'status' => 400,
+                'message' => 'User not connected'
+            ];
+            return response()->json($data, 400);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required',
             'description' => 'required'
@@ -95,7 +104,7 @@ class ProgramController extends Controller
             $program->description = $request->description;
             $program->price = $request->price;
             $program->photo = $request->photo;
-            $program->creator = $request->creator;
+            $program->creator = $user;
             $program->enabled = $request->enabled;
 
             if ($program->save()) {
@@ -117,7 +126,6 @@ class ProgramController extends Controller
     //Update program detais
     public function update(Request $request, $id)
     {
-
         $validator = Validator::make($request->all(), [
             'name' => 'required',
             'description' => 'required'
@@ -145,16 +153,13 @@ class ProgramController extends Controller
                 $program->description = $request->description;
                 $program->price = $request->price;
                 $program->photo = $request->photo;
-                $program->creator = $request->creator;
                 $program->enabled = $request->enabled;
-
                 $program->save();
 
                 $data = [
                     'status' => 200,
                     'message' => 'Program updated successfully'
                 ];
-
                 return response()->json($data, 200);
             }
         }
@@ -264,8 +269,8 @@ class ProgramController extends Controller
         } else {
             $programCourse = new ProgramCourse();
 
-            $programCourse->courseId = $request->courseId;
-            $programCourse->programId = $request->programId;
+            $programCourse->course_id = $request->courseId;
+            $programCourse->program_id = $request->programId;
 
             $programCourse->save();
 
@@ -281,7 +286,7 @@ class ProgramController extends Controller
     // delete a program course
     public function removeProgramCourse($courseId, $programId)
     {
-        $programCourse = ProgramCourse::where('programId', $programId)->where('courseId', $courseId);
+        $programCourse = ProgramCourse::where('program_id', $programId)->where('course_id', $courseId);
         if ($programCourse->delete()) {
             $data = [
                 'status' => 200,
@@ -302,8 +307,8 @@ class ProgramController extends Controller
     public function listProgramCourses($programId)
     {
         $programCourses = Course::select('courses.*')
-            ->join('program_courses', 'courses.id', '=', 'program_courses.courseId')
-            ->where('program_courses.programId', $programId)->get();
+            ->join('program_courses', 'courses.id', '=', 'program_courses.course_id')
+            ->where('program_courses.program_id', $programId)->get();
 
         if ($programCourses->isEmpty()) {
             $data = [
@@ -324,21 +329,21 @@ class ProgramController extends Controller
     public function registerProgram($programId)
     {
         // Verify connection
-        if (!isset($_SESSION['student'])) {
+        if (!isset ($_SESSION['student'])) {
             $data = [
                 'status' => 400,
                 'message' => 'User not connected'
             ];
             return response()->json($data, 400);
         } else { // register
-            $registered = Enrollment::where('studentId', $_SESSION['student'])
-                ->where('programId', $programId)->get();
+            $registered = Enrollment::where('user_id', $_SESSION['student'])
+                ->where('program_id', $programId)->get();
 
             if ($registered->isEmpty()) {
                 $enrollment = new Enrollment();
 
-                $enrollment->programId = $programId;
-                $enrollment->studentId = $_SESSION['student'];
+                $enrollment->program_id = $programId;
+                $enrollment->user_id = $_SESSION['student'];
 
                 $enrollment->save();
 
@@ -361,7 +366,7 @@ class ProgramController extends Controller
     public function enrolledPrograms()
     {
         // Verify connection
-        if (!isset($_SESSION['student'])) {
+        if (!isset ($_SESSION['student'])) {
             $data = [
                 'status' => 400,
                 'message' => 'User not connected'
@@ -369,8 +374,8 @@ class ProgramController extends Controller
             return response()->json($data, 400);
         } else {
             $programs = Program::select('programs.*')
-                ->join('enrollments', 'programs.id', '=', 'enrollments.programId')
-                ->where('studentId', $_SESSION['student'])
+                ->join('enrollments', 'programs.id', '=', 'enrollments.program_id')
+                ->where('user_id', $_SESSION['student'])
                 ->get();
             $data = [
                 'status' => 200,

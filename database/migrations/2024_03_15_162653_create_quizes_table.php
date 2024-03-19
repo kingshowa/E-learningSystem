@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('quizes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('contentId')->constrained('contents')->onDelete('cascade');
+            $table->foreignId('content_id')->constrained('contents')->onDelete('cascade');
+            $table->string('instruction')->nullable();
             $table->timestamps();
         });
     }

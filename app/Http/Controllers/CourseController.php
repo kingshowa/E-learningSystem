@@ -99,8 +99,8 @@ class CourseController extends Controller
             return response()->json($data, 400);
         } else {
             $courses = Course::select('courses.*')
-                ->join('enrollments', 'courses.id', '=', 'enrollments.courseId')
-                ->where('enrollments.studentId', $_SESSION['student'])->get();
+                ->join('enrollments', 'courses.id', '=', 'enrollments.course_id')
+                ->where('enrollments.user_id', $_SESSION['student'])->get();
             $data = [
                 'status' => 200,
                 'courses' => $courses
@@ -307,8 +307,8 @@ class CourseController extends Controller
         } else {
             $courseModule = new CourseModule();
 
-            $courseModule->courseId = $request->courseId;
-            $courseModule->moduleId = $request->moduleId;
+            $courseModule->course_id = $request->courseId;
+            $courseModule->module_id = $request->moduleId;
 
             $courseModule->save();
 
@@ -323,7 +323,7 @@ class CourseController extends Controller
     // Delete a course module
     public function removeCourseModule($courseId, $moduleId)
     {
-        $courseModule = CourseModule::where('moduleId', $moduleId)->where('courseId', $courseId);
+        $courseModule = CourseModule::where('module_id', $moduleId)->where('course_id', $courseId);
         if ($courseModule->delete()) {
             $data = [
                 'status' => 200,
@@ -343,13 +343,13 @@ class CourseController extends Controller
     public function listCourseModules($courseId)
     {
         $courseModules = Module::select('modules.*')
-            ->join('course_modules', 'modules.id', '=', 'course_modules.moduleId')
-            ->where('course_modules.courseId', $courseId)->get();
+            ->join('course_modules', 'modules.id', '=', 'course_modules.module_id')
+            ->where('course_modules.course_id', $courseId)->get();
 
         if ($courseModules->isEmpty()) {
             $data = [
                 'status' => 404,
-                'message' => 'There are no modules in this program, add new course!'
+                'message' => 'There are no modules in this course, add new module!'
             ];
             return response()->json($data, 404);
         } else {
@@ -372,14 +372,14 @@ class CourseController extends Controller
             ];
             return response()->json($data, 400);
         } else { // register
-            $registered = Enrollment::where('studentId', $_SESSION['student'])
-                ->where('courseId', $courseId)->get();
+            $registered = Enrollment::where('user_id', $_SESSION['student'])
+                ->where('course_id', $courseId)->get();
 
             if ($registered->isEmpty()) {
                 $enrollment = new Enrollment();
 
-                $enrollment->courseId = $courseId;
-                $enrollment->studentId = $_SESSION['student'];
+                $enrollment->course_id = $courseId;
+                $enrollment->user_id = $_SESSION['student'];
 
                 $enrollment->save();
 

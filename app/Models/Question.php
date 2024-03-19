@@ -9,7 +9,18 @@ class Question extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'quizeId',
-        'context'
+        'quize_id',
+        'context',
+        'imageUrl',
     ];
+
+    public function quiz()
+    {
+        return $this->belongsTo(Quize::class);
+    }
+
+    public function options()
+    {
+        return $this->hasMany(Option::class);
+    }
 }

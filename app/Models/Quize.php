@@ -10,6 +10,12 @@ class Quize extends Model
     use HasFactory;
 
     protected $fillable = [
-        'contentId'
+        'content_id',
+        'instruction',
     ];
+
+    public function questions()
+    {
+        return $this->hasMany(Question::class);
+    }
 }

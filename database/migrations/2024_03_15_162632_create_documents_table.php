@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('contentId')->constrained('contents')->onDelete('cascade');
+            $table->foreignId('content_id')->constrained('contents')->onDelete('cascade');
             $table->string('link');
             $table->string('caption')->nullable();
             $table->timestamps();

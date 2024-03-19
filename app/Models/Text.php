@@ -10,8 +10,7 @@ class Text extends Model
     use HasFactory;
 
     protected $fillable = [
-        'contentId',
+        'content_id',
         'data',
-        'optionId',
     ];
 }

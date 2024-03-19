@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Quize;
 use Illuminate\Http\Request;
 use App\Models\Module;
 use App\Models\Content;
@@ -154,7 +153,6 @@ class ModuleController extends Controller
     // Get module contents
     public function getModuleContents($moduleId)
     {
-
         $module = Module::find($moduleId); // test 
 
         if ($module == null) {
@@ -165,13 +163,13 @@ class ModuleController extends Controller
             return response()->json($data, 404);
         }
 
-        $contents = Content::where('moduleId', $moduleId)->get();
+        $contents = Content::where('module_id', $moduleId)->get();
 
         $moduleContents = [];
         foreach ($contents as $content) {
             $contentType = Content::select($content->type . 's.*', 'contents.type')
-                ->join($content->type . 's', 'contents.id', '=', $content->type . 's.contentId')
-                ->where('contentId', $content->id)->get();
+                ->join($content->type . 's', 'contents.id', '=', $content->type . 's.content_id')
+                ->where('content_id', $content->id)->get();
 
             $moduleContents[] = $contentType;
         }

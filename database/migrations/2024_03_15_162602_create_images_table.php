@@ -13,10 +13,9 @@ return new class extends Migration
     {
         Schema::create('images', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('contentId')->default(0)->nullable();
+            $table->foreignId('content_id')->constrained('contents')->onDelete('cascade')->default(null)->nullable();
             $table->string('link');
             $table->string('caption')->nullable();
-            $table->foreignId('optionId')->default(0)->nullable();
             $table->timestamps();
         });
     }
