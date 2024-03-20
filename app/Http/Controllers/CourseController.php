@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Discussion;
 use App\Models\Enrollment;
 use Illuminate\Http\Request;
 use App\Models\Course;
@@ -139,6 +140,9 @@ class CourseController extends Controller
             $course->enabled = $request->enabled;
 
             if ($course->save()) {
+                $disc = new Discussion();
+                $disc->course_id = $course->id;
+                $disc->save();
                 $data = [
                     'status' => 200,
                     'message' => 'Course created successfully'

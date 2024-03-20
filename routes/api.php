@@ -8,6 +8,8 @@ use App\Http\Controllers\ProgramController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\QuizeController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\PostController;
+use App\Http\Controllers\MessageController;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,9 +27,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 //Only for production
-$_SESSION['admin'] = 1;
-//$_SESSION['teacher']=2;
-$_SESSION['student'] = 3;
+//$_SESSION['admin'] = 1;
+$_SESSION['teacher']=2;
+//$_SESSION['student'] = 3;
 
 // user
 Route::post('user', [UserController::class, 'store']);
@@ -90,3 +92,13 @@ Route::post('quize/option/{id}/{optionId}', [QuizeController::class, 'updateOpti
 Route::delete('quize/question/{id}', [QuizeController::class, 'deleteQuestion']);
 Route::delete('quize/option/{id}', [QuizeController::class, 'deleteOption']);
 Route::get('quize/questions/{id}', [QuizeController::class, 'index']);
+
+// Discussions
+Route::get('discussion/{id}', [PostController::class,'index']);
+Route::post('discussion/post/{id}', [PostController::class,'store']);
+Route::delete('discussion/post/{id}', [PostController::class,'delete']);
+// Messages
+Route::get('message/chat/{id}', [MessageController::class,'index']);
+Route::post('message/send', [MessageController::class,'store']);
+Route::delete('message/{id}', [MessageController::class,'destroy']);
+Route::post('message/like/{id}', [MessageController::class,'likeMessage']);

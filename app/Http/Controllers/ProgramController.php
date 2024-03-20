@@ -46,7 +46,7 @@ class ProgramController extends Controller
     // Get admin programs: can be deleted or not
     public function getAdminPrograms(Request $request)
     {
-        // verify connection
+        // just for development // will use // $user = Auth::user()->id;
         if (isset ($_SESSION['admin'])) {
             $user = $_SESSION['admin'];
         } else {
