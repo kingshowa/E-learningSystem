@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('quizes', function (Blueprint $table) {
+        Schema::create('module_progress', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('content_id')->constrained('contents')->onDelete('cascade');
-            $table->string('instruction')->nullable();
-            $table->double('pass_percentage')->nullable()->default(50);
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('module_id')->constrained('modules')->cascadeOnDelete();
+            $table->boolean('is_completed')->nullable();
             $table->timestamps();
         });
     }
@@ -25,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('quizes');
+        Schema::dropIfExists('module_progress');
     }
 };

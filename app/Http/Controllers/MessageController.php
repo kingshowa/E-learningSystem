@@ -12,6 +12,25 @@ use Validator;
 
 class MessageController extends Controller
 {
+    private $user;
+
+    public function getUser(){
+        if (isset ($_SESSION['admin'])) {
+            $this->user = $_SESSION['admin'];
+        } else if (isset ($_SESSION['teacher'])) {
+            $this->user = $_SESSION['teacher'];
+        } else if (isset ($_SESSION['student'])) {
+            $this->user = $_SESSION['student'];
+        } else {
+            $data = [
+                'status' => 400,
+                'message' => 'User not connected'
+            ];
+            return response()->json($data, 400);
+        }
+        return $this->user;
+    }
+
     // List all the messages in a particular chat between 2 users
     public function index($id)
     {
@@ -24,23 +43,11 @@ class MessageController extends Controller
             return response()->json($data, 404);
         }
 
-        if (isset ($_SESSION['admin'])) {
-            $user = $_SESSION['admin'];
-        } else if (isset ($_SESSION['teacher'])) {
-            $user = $_SESSION['teacher'];
-        } else if (isset ($_SESSION['student'])) {
-            $user = $_SESSION['student'];
-        } else {
-            $data = [
-                'status' => 400,
-                'message' => 'User not connected'
-            ];
-            return response()->json($data, 400);
-        }
+        
 
         $messages = Message::whereRaw(
             '(sent_by = ? AND sent_to = ?) OR (sent_by = ? AND sent_to = ?)',
-            [$receiver->id, $user, $user, $receiver->id]
+            [$receiver->id, $this->getUser(), $this->getUser(), $receiver->id]
         )->get();
 
         $data = [
@@ -79,20 +86,8 @@ class MessageController extends Controller
                 $message->sent_to = $receiver->id;
             }
         }
-        if (isset ($_SESSION['admin'])) {
-            $user = $_SESSION['admin'];
-        } else if (isset ($_SESSION['teacher'])) {
-            $user = $_SESSION['teacher'];
-        } else if (isset ($_SESSION['student'])) {
-            $user = $_SESSION['student'];
-        } else {
-            $data = [
-                'status' => 400,
-                'message' => 'User not connected'
-            ];
-            return response()->json($data, 400);
-        }
-        $message->sent_by = $user;
+        
+        $message->sent_by = $this->getUser();
         $message->text = $request->text;
         if (isset ($request->attachment) && $request->attachment) {
             $validator = Validator::make($request->all(), [
@@ -152,26 +147,32 @@ class MessageController extends Controller
         } else {
             $like = new Like();
 
-            // $like->user_id = Auth::user()->id;
-            if (isset ($_SESSION['admin'])) {
-                $user = $_SESSION['admin'];
-            } else if (isset ($_SESSION['teacher'])) {
-                $user = $_SESSION['teacher'];
-            } else if (isset ($_SESSION['student'])) {
-                $user = $_SESSION['student'];
-            } else {
-                $data = [
-                    'status' => 400,
-                    'message' => 'User not connected'
-                ];
-                return response()->json($data, 400);
-            }
-            $like->user_id = $user;
+            $like->user_id = $this->getUser();
             $like->message_id = $message->id;
             $like->save();
             $data = [
                 'status' => 200,
                 'message' => 'Liked'
+            ];
+            return response()->json($data, 200);
+        }
+    }
+
+    // Delete like
+    public function removeLike($messageId)
+    {
+        $like = Like::where('user_id', $this->getUser())->where('message_id', $messageId)->first();
+        if (!$like) {
+            $data = [
+                'status' => 404,
+                'message' => 'Like not Found'
+            ];
+            return response()->json($data, 404);
+        } else {
+            $like->delete();
+            $data = [
+                'status' => 200,
+                'message' => 'Deleted'
             ];
             return response()->json($data, 200);
         }

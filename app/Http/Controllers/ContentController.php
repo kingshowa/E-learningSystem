@@ -157,9 +157,24 @@ class ContentController extends Controller
                 $text->data = $request->data;
                 $text->save();
             } else if ($request->type == 'quize') {  // create quize
-                $quize = new Quize();
-                $quize->content_id = $contentId;
-                $quize->save();
+                $validator = Validator::make($request->all(), [
+                    'instruction' => 'required',
+                    'pass_percentage' => 'required'
+                ]);
+
+                if ($validator->fails()) {
+                    $data = [
+                        'status' => 422,
+                        'message' => $validator->messages()
+                    ];
+                    return response()->json($data, 422);
+                } else {
+                    $quize = new Quize();
+                    $quize->content_id = $contentId;
+                    $quize->pass_percentage = $request->pass_percentage;
+                    $quize->instruction = $request->instruction;
+                    $quize->save();
+                }
             } else {
                 $data = [
                     'status' => 401,
@@ -364,7 +379,7 @@ class ContentController extends Controller
             return response()->json($data, 404);
         } else {
             $validator = Validator::make($request->all(), [
-                'data' => 'required', //Adjust max file size as needed
+                'data' => 'required'
             ]);
 
             if ($validator->fails()) {
@@ -398,14 +413,29 @@ class ContentController extends Controller
             ];
             return response()->json($data, 404);
         } else {
-            $quize->instruction = $request->instruction;
-            $quize->save();
 
-            $data = [
-                'status' => 200,
-                'message' => 'Quiz updated!'
-            ];
-            return response()->json($data, 200);
+            $validator = Validator::make($request->all(), [
+                'instruction' => 'required',
+                'pass_percentage' => 'required'
+            ]);
+
+            if ($validator->fails()) {
+                $data = [
+                    'status' => 422,
+                    'message' => $validator->messages()
+                ];
+                return response()->json($data, 422);
+            } else {
+                $quize->pass_percentage = $request->pass_percentage;
+                $quize->instruction = $request->instruction;
+                $quize->save();
+
+                $data = [
+                    'status' => 200,
+                    'message' => 'Quiz updated!'
+                ];
+                return response()->json($data, 200);
+            }
         }
     }
 }

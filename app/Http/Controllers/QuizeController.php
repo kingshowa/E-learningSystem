@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Mark;
 use App\Models\Question;
 use Illuminate\Http\Request;
 use App\Models\Option;
@@ -11,8 +12,31 @@ use Validator;
 
 class QuizeController extends Controller
 {
-    public function index($quizeId){
-        
+
+    private $user;
+
+    public function getUser()
+    {
+        if (isset ($_SESSION['admin'])) {
+            $this->user = $_SESSION['admin'];
+        } else if (isset ($_SESSION['teacher'])) {
+            $this->user = $_SESSION['teacher'];
+        } else if (isset ($_SESSION['student'])) {
+            $this->user = $_SESSION['student'];
+        } else {
+            $data = [
+                'status' => 400,
+                'message' => 'User not connected'
+            ];
+            return response()->json($data, 400);
+        }
+        return $this->user;
+    }
+
+
+    public function index($quizeId)
+    {
+
         $quize = Quize::with('questions.options')->findOrFail($quizeId);
 
         $data = [
@@ -214,7 +238,7 @@ class QuizeController extends Controller
             if ($question->imageUrl != null) {
                 Storage::delete($question->imageUrl);
             }
-            $options = Option::where('question_id','=', $question->id)->get();
+            $options = Option::where('question_id', '=', $question->id)->get();
             foreach ($options as $option) {
                 if ($option->type == 'image') {
                     Storage::delete($option->data);
@@ -250,5 +274,35 @@ class QuizeController extends Controller
             ];
             return response()->json($data, 200);
         }
+    }
+
+    // Register marks obtained by user on a partucular quize
+    public function registerMarkObtained(Request $request, $id)
+    {   
+        Quize::findOrFail($id);
+        $mark = Mark::where('user_id', '=', $this->getUser())->where('quize_id', '=', $id)->first();
+        if (!$mark) {
+            $mark = new Mark();
+            $mark->user_id = $this->getUser();
+            $mark->quize_id = $id;
+            $mark->mark_obtained = $request->mark_obtained;
+            $mark->attempts = 1;
+            $mark->save();
+            $data = [
+                'status' => 200,
+                'message' => 'Mark Saved'
+            ];
+            return response()->json($data, 200);
+        } else {
+            $mark->mark_obtained = $request->mark_obtained;
+            $mark->attempts = $mark->attempts + 1;
+            $mark->save();
+            $data = [
+                'status' => 200,
+                'message' => 'Mark updated'
+            ];
+            return response()->json($data, 200);
+        }
+
     }
 }

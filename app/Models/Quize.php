@@ -12,6 +12,7 @@ class Quize extends Model
     protected $fillable = [
         'content_id',
         'instruction',
+        'pass_percentage',
     ];
 
     public function questions()
