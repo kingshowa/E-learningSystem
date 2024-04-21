@@ -7,6 +7,7 @@ use App\Models\Enrollment;
 use Illuminate\Http\Request;
 use App\Models\Course;
 use App\Models\Module;
+use App\Models\User;
 use App\Models\CourseModule;
 use Validator;
 
@@ -68,22 +69,33 @@ class CourseController extends Controller
             return response()->json($data, 400);
         }
 
-        if ($request->has('deleted')) {
+        
             // deleted courses for a user
-            $courses = Course::onlyTrashed()->where('creator', $user)->get();
-        } else if ($request->has('supervise')) {
-            // Admin gets courses of the teachers he supervises
-            $courses = Course::select('courses.*')
-                ->join('users', 'courses.creator', '=', 'users.id')
-                ->where('users.supervisor', '=', $user)
-                ->get();
-        } else {
-            // Get courses assigned to the user and courses created by user: teacher or admin
-            $courses = Course::where('creator', $user)->orWhere('assigned_to', $user)->get();
-        }
+        $deleted_courses = Course::onlyTrashed()->where('creator', $user)->get();
+
+        // if ($request->has('supervise')) {
+        //     // Admin gets courses of the teachers he supervises
+        //     $courses = Course::select('courses.*')
+        //         ->join('users', 'courses.creator', '=', 'users.id')
+        //         ->where('users.supervisor', '=', $user)
+        //         ->get();
+        // } else {
+        //     // Get courses assigned to the user and courses created by user: teacher or admin
+        //     $courses = Course::where('creator', $user)->orWhere('assigned_to', $user)->get();
+        // }
+
+        $courses = Course::select('courses.*')
+    ->where(function ($query) use ($user) {
+        // Filter courses where the creator is the user OR assigned_to is the user
+        $query->where('creator', $user)
+              ->orWhere('assigned_to', $user);
+    })
+    ->get();
+
         $data = [
             'status' => 200,
-            'courses' => $courses
+            'courses' => $courses,
+            'deleted_courses'=> $deleted_courses,
         ];
         return response()->json($data, 200);
     }
@@ -270,6 +282,27 @@ class CourseController extends Controller
         }
     }
 
+    // Delete module
+    public function destroyPermanent($id)
+    {
+        $course = Course::withTrashed()->find($id);
+
+        if ($course == null) {
+            $data = [
+                'status' => 421,
+                'message' => 'This module does not exist.'
+            ];
+            return response()->json($data, 421);
+        } else {
+            $course->forceDelete();
+            $data = [
+                'status' => 200,
+                'message' => 'Module deleted successfully'
+            ];
+            return response()->json($data, 200);
+        }
+    }
+
     // Restore deleted course
     public function restoreCourse($id)
     {
@@ -346,23 +379,38 @@ class CourseController extends Controller
     // List all modules in a particular course
     public function listCourseModules($courseId)
     {
+        $course = Course::find($courseId); // test 
+
+        if ($course == null) {
+            $data = [
+                'status' => 404,
+                'message' => 'Parameter error!'
+            ];
+            return response()->json($data, 404);
+        }
+
         $courseModules = Module::select('modules.*')
             ->join('course_modules', 'modules.id', '=', 'course_modules.module_id')
             ->where('course_modules.course_id', $courseId)->get();
 
-        if ($courseModules->isEmpty()) {
-            $data = [
-                'status' => 404,
-                'message' => 'There are no modules in this course, add new module!'
-            ];
-            return response()->json($data, 404);
-        } else {
+        $teachers = User::where('role', '=', 'teacher')->get();
+
+        // if ($courseModules->isEmpty()) {
+        //     $data = [
+        //         'status' => 404,
+        //         'message' => 'There are no modules in this course, add new module!'
+        //     ];
+        //     return response()->json($data, 404);
+        // } else {
+            $course->modules = $courseModules;
+
             $data = [
                 'status' => 200,
-                'courseModules' => $courseModules
+                'course' => $course,
+                'teachers' => $teachers,
             ];
             return response()->json($data, 200);
-        }
+        // }
     }
 
     // Enroll into a course

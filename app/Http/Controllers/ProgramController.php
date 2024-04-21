@@ -8,6 +8,7 @@ use App\Models\Program;
 use App\Models\Course;
 use App\Models\Enrollment;
 use Validator;
+use Illuminate\Support\Facades\Storage;
 
 class ProgramController extends Controller
 {
@@ -57,16 +58,16 @@ class ProgramController extends Controller
             return response()->json($data, 400);
         }
 
-        if ($request->has('deleted')) {
-            // deleted programs for a user
-            $programs = Program::onlyTrashed()->where('creator', $user)->get();
-        } else {
+        
+        $deleted_programs = Program::onlyTrashed()->where('creator', $user)->get();
+        
             // all programs created by a user
-            $programs = Program::where('creator', $user)->get();
-        }
+        $programs = Program::where('creator', $user)->get();
+        
         $data = [
             'status' => 200,
-            'programs' => $programs
+            'programs' => $programs,
+            'deleted_programs' => $deleted_programs
         ];
         return response()->json($data, 200);
     }
@@ -100,12 +101,29 @@ class ProgramController extends Controller
         } else {
             $program = new Program;
 
+            if ($request->has('photo')) {
+                $validator = Validator::make($request->all(), [
+                    'photo' => 'required|mimes:jpeg,jpg,png,tiff|max:5000', //Adjust max file size as needed
+                ]);
+
+                if ($validator->fails()) {
+                    $data = [
+                        'status' => 422,
+                        'message' => $validator->messages()
+                    ];
+                    $content->delete();
+                    return response()->json($data, 422);
+                } else {
+                    $path = $request->file('photo')->store('images');
+                    $program->photo = $path;
+                }
+            }
+
             $program->name = $request->name;
             $program->description = $request->description;
             $program->price = $request->price;
-            $program->photo = $request->photo;
             $program->creator = $user;
-            $program->enabled = $request->enabled;
+            $program->enabled = false;
 
             if ($program->save()) {
                 $data = [
@@ -149,10 +167,26 @@ class ProgramController extends Controller
 
                 return response()->json($data, 421);
             } else {
+                if ($request->hasFile('photo')) {
+                $validator = Validator::make($request->all(), [
+                    'photo' => 'required|mimes:jpeg,jpg,png,tiff|max:5000', //Adjust max file size as needed
+                ]);
+
+                if ($validator->fails()) {
+                    $data = [
+                        'status' => 422,
+                        'message' => $validator->messages()
+                    ];
+                    $content->delete();
+                    return response()->json($data, 422);
+                } else {
+                    $path = $request->file('photo')->store('images');
+                    $program->photo = $path;
+                }
+                }
                 $program->name = $request->name;
                 $program->description = $request->description;
-                $program->price = $request->price;
-                $program->photo = $request->photo;
+                $program->price = floatval($request->price);
                 $program->enabled = $request->enabled;
                 $program->save();
 
@@ -224,6 +258,27 @@ class ProgramController extends Controller
                 'message' => 'Program deleted successfully'
             ];
 
+            return response()->json($data, 200);
+        }
+    }
+
+    // Delete program permanently
+    public function destroyPermanent($id)
+    {
+        $program = Program::withTrashed()->find($id);
+
+        if ($program == null) {
+            $data = [
+                'status' => 421,
+                'message' => 'This module does not exist.'
+            ];
+            return response()->json($data, 421);
+        } else {
+            $program->forceDelete();
+            $data = [
+                'status' => 200,
+                'message' => 'Module deleted successfully'
+            ];
             return response()->json($data, 200);
         }
     }
@@ -306,23 +361,27 @@ class ProgramController extends Controller
     // List all courses in a particular program
     public function listProgramCourses($programId)
     {
-        $programCourses = Course::select('courses.*')
+        $program = Program::find($programId); // test 
+
+        if ($program == null) {
+            $data = [
+                'status' => 404,
+                'message' => 'Parameter error!'
+            ];
+            return response()->json($data, 404);
+        }
+
+        $courses = Course::select('courses.*')
             ->join('program_courses', 'courses.id', '=', 'program_courses.course_id')
             ->where('program_courses.program_id', $programId)->get();
 
-        if ($programCourses->isEmpty()) {
-            $data = [
-                'status' => 404,
-                'message' => 'There are no courses in this program, add new course!'
-            ];
-            return response()->json($data, 404);
-        } else {
+            $program->courses = $courses;
             $data = [
                 'status' => 200,
-                'programCourses' => $programCourses
+                'program' => $program
             ];
             return response()->json($data, 200);
-        }
+        
     }
 
     // Enroll into a program

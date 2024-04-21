@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Module;
 use App\Models\Content;
+use App\Models\Course;
 use Validator;
+use Illuminate\Support\Facades\DB;
 
 class ModuleController extends Controller
 {
@@ -38,6 +40,57 @@ class ModuleController extends Controller
             return response()->json($data, 200);
         }
     }
+
+    public function manageModules(Request $request)
+    {
+        // verify connection
+        if (isset($_SESSION['admin'])) {
+            $user = $_SESSION['admin'];
+        } else if (isset($_SESSION['teacher'])) {
+            $user = $_SESSION['teacher'];
+        } else {
+            $data = [
+                'status' => 400,
+                'message' => 'User not connected'
+            ];
+            return response()->json($data, 400);
+        }
+
+            // deleted courses for a user
+        $deleted_modules = Module::onlyTrashed()->where('creator', $user)->get();
+
+        // if ($request->has('supervise')) {
+        //     // Admin gets courses of the teachers he supervises
+        //     $modules = Module::select('modules.*')
+        //         ->join('users', 'modules.creator', '=', 'users.id')
+        //         ->where('users.supervisor', '=', $user)
+        //         ->get();
+        // } else {
+        //     // Get courses assigned to the user and courses created by user: teacher or admin
+        //     $modules = Module::where('creator', $user)->get();
+        // }
+        $modules = Module::select('modules.*')
+    ->where(function ($query) use ($user) {
+        // Check if the user is a supervisor
+        $query->whereExists(function ($subquery) use ($user) {
+            $subquery->select(DB::raw(1))
+                ->from('users')
+                ->whereColumn('modules.creator', '=', 'users.id')
+                ->where('users.supervisor', '=', $user);
+        })
+        ->orWhere('creator', $user); // Also include modules created by the user
+    })
+    ->get();
+
+        $data = [
+            'status' => 200,
+            'modules' => $modules,
+            'deleted_modules' => $deleted_modules
+        ];
+        return response()->json($data, 200);
+    }
+
+
 
     // Create a module
     public function store(Request $request)
@@ -129,6 +182,27 @@ class ModuleController extends Controller
         }
     }
 
+    // Delete module
+    public function destroyPermanent($id)
+    {
+        $module = Module::withTrashed()->find($id);
+
+        if ($module == null) {
+            $data = [
+                'status' => 421,
+                'message' => 'This module does not exist.'
+            ];
+            return response()->json($data, 421);
+        } else {
+            $module->forceDelete();
+            $data = [
+                'status' => 200,
+                'message' => 'Module deleted successfully'
+            ];
+            return response()->json($data, 200);
+        }
+    }
+
     // Restore deleted module
     public function restoreModule($id)
     {
@@ -153,6 +227,19 @@ class ModuleController extends Controller
     // Get module contents
     public function getModuleContents($moduleId)
     {
+        // verify connection
+        if (isset($_SESSION['admin'])) {
+            $user = $_SESSION['admin'];
+        } else if (isset($_SESSION['teacher'])) {
+            $user = $_SESSION['teacher'];
+        } else {
+            $data = [
+                'status' => 400,
+                'message' => 'User not connected'
+            ];
+            return response()->json($data, 400);
+        }
+
         $module = Module::find($moduleId); // test 
 
         if ($module == null) {
@@ -164,28 +251,45 @@ class ModuleController extends Controller
         }
 
         $contents = Content::where('module_id', $moduleId)->get();
-
         $moduleContents = [];
+
         foreach ($contents as $content) {
-            $contentType = Content::select($content->type . 's.*', 'contents.type')
-                ->join($content->type . 's', 'contents.id', '=', $content->type . 's.content_id')
-                ->where('content_id', $content->id)->get();
+            $contentType = Content::select($content->type . 's.*', 'contents.type', 'title', 'duration')
+            ->join($content->type . 's', 'contents.id', '=', $content->type . 's.content_id')
+            ->where('content_id', $content->id)
+        ->get(); // Get the result of the query
 
-            $moduleContents[] = $contentType;
-        }
-
-        if (count($moduleContents) == 0) {
-            $data = [
-                'status' => 404,
-                'message' => 'There are no contents in this module, add new content!'
-            ];
-            return response()->json($data, 404);
-        } else {
-            $data = [
-                'status' => 200,
-                'moduleContents' => $moduleContents
-            ];
-            return response()->json($data, 200);
+        // Check if any results are returned
+        if ($contentType->isNotEmpty()) {
+            // Push the first item (object) of the collection into $moduleContents
+            $moduleContents[] = $contentType->first();
         }
     }
+
+    $courses = Course::select('courses.*')
+    ->where(function ($query) use ($user) {
+        // Filter courses where the creator is the user OR assigned_to is the user
+        $query->where('creator', $user)
+              ->orWhere('assigned_to', $user);
+    })
+    ->get();
+
+    // if (count($moduleContents) == 0) {
+    //     $data = [
+    //         'status' => 404,
+    //         'message' => 'There are no contents in this module, add new content!'
+    //     ];
+    //     return response()->json($data, 404);
+    //} else {
+        $module->course_id = 0;
+        $module->contents = $moduleContents;
+
+        $data = [
+            'status' => 200,
+            'module' => $module,
+            'courses' => $courses,
+        ];
+        return response()->json($data, 200);
+    //}
+}
 }

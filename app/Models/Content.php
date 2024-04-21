@@ -10,6 +10,8 @@ class Content extends Model
     use HasFactory;
     protected $fillable = [
         'moduleId',
-        'type'
+        'title',
+        'type',
+        'duration',
     ];
 }

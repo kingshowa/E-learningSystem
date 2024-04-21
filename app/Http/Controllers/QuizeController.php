@@ -37,14 +37,33 @@ class QuizeController extends Controller
     public function index($quizeId)
     {
 
-        $quize = Quize::with('questions.options')->findOrFail($quizeId);
+        $quize = Quize::with('content', 'questions.options') // Load relationships
+    ->findOrFail($quizeId);
+
+// Now $quize will contain the Quize object with its related questions, options, and the associated content
+
 
         $data = [
             'status' => 200,
-            'questions' => $quize
+            'quize' => $quize
         ];
         return response()->json($data, 200);
     }
+
+
+    public function getQuestion($questionId)
+    {
+
+        $question = Question::with('options') // Load relationships
+            ->findOrFail($questionId);
+        $data = [
+            'status' => 200,
+            'question' => $question
+        ];
+        return response()->json($data, 200);
+    }
+
+
     // Create question
     public function createQuestion(Request $request, $id)
     {

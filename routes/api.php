@@ -27,7 +27,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 //Only for production
-//$_SESSION['admin'] = 1;
+$_SESSION['admin'] = 1;
 //$_SESSION['teacher']=2;
 $_SESSION['student'] = 3;
 
@@ -38,10 +38,11 @@ Route::post('user', [UserController::class, 'store']);
 Route::get('programs', [ProgramController::class, 'index']);
 Route::get('program/{id}', [ProgramController::class, 'getProgramById']);
 Route::get('admin/programs', [ProgramController::class, 'getAdminPrograms']); // can be achived or not
-Route::put('program/edit/{id}', [ProgramController::class, 'update']);
+Route::post('program/edit/{id}', [ProgramController::class, 'update']);
 Route::put('program/enable/{id}', [ProgramController::class, 'updateStatus']);
 Route::get('program/restore/{id}', [ProgramController::class, 'restoreProgram']); // retrieves deleted program
 Route::delete('program/delete/{id}', [ProgramController::class, 'destroy']);
+Route::delete('program/destroy/{id}', [ProgramController::class, 'destroyPermanent']);
 Route::post('program', [ProgramController::class, 'store']);
 Route::post('program/add/course', [ProgramController::class, 'addProgramCourse']);
 Route::delete('program/delete/{courseId}/{programId}', [ProgramController::class, 'removeProgramCourse']);
@@ -60,6 +61,7 @@ Route::post('course', [CourseController::class, 'store']);
 Route::put('course/edit/{id}', [CourseController::class, 'update']);
 Route::put('course/enable/{id}', [CourseController::class, 'updateStatus']);
 Route::delete('course/delete/{id}', [CourseController::class, 'destroy']);
+Route::delete('course/destroy/{id}', [CourseController::class, 'destroyPermanent']);
 Route::post('course/add/module', [CourseController::class, 'addCourseModule']);
 Route::delete('course/delete/{courseId}/{moduleId}', [CourseController::class, 'removeCourseModule']);
 Route::get('course/modules/{id}', [CourseController::class, 'listCourseModules']);
@@ -68,9 +70,11 @@ Route::get('course/register/{id}', [CourseController::class, 'registerCourse']);
 //module
 Route::get('modules', [ModuleController::class, 'index']); // not necesary
 Route::get('module/{id}', [ModuleController::class, 'getModuleById']);
+Route::get('modules/manage', [ModuleController::class, 'manageModules']);
 Route::post('module', [ModuleController::class, 'store']);
 Route::put('module/edit/{id}', [ModuleController::class, 'update']);
 Route::delete('module/delete/{id}', [ModuleController::class, 'destroy']);
+Route::delete('module/destroy/{id}', [ModuleController::class, 'destroyPermanent']);
 Route::get('module/restore/{id}', [ModuleController::class, 'restoreModule']);
 Route::get('module/contents/{id}', [ModuleController::class, 'getModuleContents']); // to be done
 
@@ -92,15 +96,16 @@ Route::post('quize/option/{id}/{optionId}', [QuizeController::class, 'updateOpti
 Route::delete('quize/question/{id}', [QuizeController::class, 'deleteQuestion']);
 Route::delete('quize/option/{id}', [QuizeController::class, 'deleteOption']);
 Route::get('quize/questions/{id}', [QuizeController::class, 'index']);
+Route::get('question/{id}', [QuizeController::class, 'getQuestion']);
 Route::post('quize/marks/{id}', [QuizeController::class, 'registerMarkObtained']);
 
 // Discussions
-Route::get('discussion/{id}', [PostController::class,'index']);
-Route::post('discussion/post/{id}', [PostController::class,'store']);
-Route::delete('discussion/post/{id}', [PostController::class,'delete']);
+Route::get('discussion/{id}', [PostController::class, 'index']);
+Route::post('discussion/post/{id}', [PostController::class, 'store']);
+Route::delete('discussion/post/{id}', [PostController::class, 'delete']);
 // Messages
-Route::get('message/chat/{id}', [MessageController::class,'index']);
-Route::post('message/send', [MessageController::class,'store']);
-Route::delete('message/{id}', [MessageController::class,'destroy']);
-Route::post('message/like/{id}', [MessageController::class,'likeMessage']);
-Route::delete('message/unlike/{id}', [MessageController::class,'removeLike']);
+Route::get('message/chat/{id}', [MessageController::class, 'index']);
+Route::post('message/send', [MessageController::class, 'store']);
+Route::delete('message/{id}', [MessageController::class, 'destroy']);
+Route::post('message/like/{id}', [MessageController::class, 'likeMessage']);
+Route::delete('message/unlike/{id}', [MessageController::class, 'removeLike']);

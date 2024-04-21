@@ -62,6 +62,9 @@ class ContentController extends Controller
             $content = new Content();
             $content->module_id = $request->moduleId;
             $content->type = $request->type;
+            $content->title = $request->title;
+            $content->title = $request->title;
+            $content->duration = $request->duration;
             $content->save();
 
             $contentId = $content->id;

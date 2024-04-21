@@ -19,4 +19,9 @@ class Quize extends Model
     {
         return $this->hasMany(Question::class);
     }
+
+    public function content()
+    {
+        return $this->belongsTo(Content::class, 'content_id');
+    }
 }
