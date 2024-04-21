@@ -125,6 +125,19 @@ class CourseController extends Controller
     // Create a new course
     public function store(Request $request)
     {
+        // verify connection
+        if (isset($_SESSION['admin'])) {
+            $user = $_SESSION['admin'];
+        } else if (isset($_SESSION['teacher'])) {
+            $user = $_SESSION['teacher'];
+        } else {
+            $data = [
+                'status' => 400,
+                'message' => 'User not connected'
+            ];
+            return response()->json($data, 400);
+        }
+        
         $validator = Validator::make($request->all(), [
             'name' => 'required',
             'description' => 'required'
@@ -140,16 +153,32 @@ class CourseController extends Controller
         } else {
             $course = new Course;
 
+            if ($request->hasFile('photo')) {
+                    $validator = Validator::make($request->all(), [
+                        'photo' => 'required|mimes:jpeg,jpg,png,tiff|max:5000', //Adjust max file size as needed
+                    ]);
+    
+                    if ($validator->fails()) {
+                        $data = [
+                            'status' => 422,
+                            'message' => $validator->messages()
+                        ];
+                
+                        return response()->json($data, 422);
+                    } else {
+                        $path = $request->file('photo')->store('images');
+                        $course->photo = $path;
+                    }
+                }
             $course->name = $request->name;
             $course->code = $request->code;
             $course->description = $request->description;
             $course->price = $request->price;
             $course->level = $request->level;
-            $course->photo = $request->photo;
-            $course->creator = $request->creator;
+            $course->creator = $user;
             $course->assigned_to = $request->assigned_to;
-            $course->completed = $request->completed;
-            $course->enabled = $request->enabled;
+            $course->completed = 0;
+            $course->enabled = 0;
 
             if ($course->save()) {
                 $disc = new Discussion();
@@ -196,7 +225,7 @@ class CourseController extends Controller
                 
                 return response()->json($data, 421);
             } else {
-                if ($request->has('photo')) {
+                if ($request->hasFile('photo')) {
                     $validator = Validator::make($request->all(), [
                         'photo' => 'required|mimes:jpeg,jpg,png,tiff|max:5000', //Adjust max file size as needed
                     ]);

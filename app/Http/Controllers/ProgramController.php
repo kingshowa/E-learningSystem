@@ -101,7 +101,7 @@ class ProgramController extends Controller
         } else {
             $program = new Program;
 
-            if ($request->has('photo')) {
+            if ($request->hasFile('photo')) {
                 $validator = Validator::make($request->all(), [
                     'photo' => 'required|mimes:jpeg,jpg,png,tiff|max:5000', //Adjust max file size as needed
                 ]);

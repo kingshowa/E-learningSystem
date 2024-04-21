@@ -6,8 +6,10 @@ use Illuminate\Http\Request;
 use App\Models\Module;
 use App\Models\Content;
 use App\Models\Course;
+use App\Models\CourseModule;
 use Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class ModuleController extends Controller
 {
@@ -70,17 +72,17 @@ class ModuleController extends Controller
         //     $modules = Module::where('creator', $user)->get();
         // }
         $modules = Module::select('modules.*')
-    ->where(function ($query) use ($user) {
+        ->where(function ($query) use ($user) {
         // Check if the user is a supervisor
-        $query->whereExists(function ($subquery) use ($user) {
-            $subquery->select(DB::raw(1))
+            $query->whereExists(function ($subquery) use ($user) {
+                $subquery->select(DB::raw(1))
                 ->from('users')
                 ->whereColumn('modules.creator', '=', 'users.id')
                 ->where('users.supervisor', '=', $user);
-        })
+            })
         ->orWhere('creator', $user); // Also include modules created by the user
     })
-    ->get();
+        ->get();
 
         $data = [
             'status' => 200,
@@ -95,6 +97,19 @@ class ModuleController extends Controller
     // Create a module
     public function store(Request $request)
     {
+        // verify connection
+        if (isset($_SESSION['admin'])) {
+            $user = $_SESSION['admin'];
+        } else if (isset($_SESSION['teacher'])) {
+            $user = $_SESSION['teacher'];
+        } else {
+            $data = [
+                'status' => 400,
+                'message' => 'User not connected'
+            ];
+            return response()->json($data, 400);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required'
         ]);
@@ -112,9 +127,17 @@ class ModuleController extends Controller
             $module->description = $request->description;
             $module->code = $request->code;
             $module->duration = $request->duration;
-            $module->creator = $request->creator;
+            $module->creator = $user;
             $module->save();
 
+            if($request->has('parent_course')){
+                $courseModule = new CourseModule();
+
+                $courseModule->course_id = $request->parent_course;
+                $courseModule->module_id = $module->id;
+
+                $courseModule->save();
+            }
             $data = [
                 'status' => 200,
                 'message' => 'Module created successfully'
@@ -124,46 +147,19 @@ class ModuleController extends Controller
     }
 
     // Update module details
-    public function update(Request $request, $id)
-    {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required'
-        ]);
+public function update(Request $request, $id)
+{
+    $validator = Validator::make($request->all(), [
+        'name' => 'required'
+    ]);
 
-        if ($validator->fails()) {
-            $data = [
-                'status' => 422,
-                'message' => $validator->messages()
-            ];
-            return response()->json($data, 422);
-        } else {
-            $module = Module::find($id);
-
-            if ($module == null) {
-                $data = [
-                    'status' => 421,
-                    'message' => 'This module does not exist.'
-                ];
-                return response()->json($data, 421);
-            } else {
-                $module->name = $request->name;
-                $module->description = $request->description;
-                $module->code = $request->code;
-                $module->duration = $request->duration;
-                $module->creator = $request->creator;
-                $module->save();
-                $data = [
-                    'status' => 200,
-                    'message' => 'Module updated successfully'
-                ];
-                return response()->json($data, 200);
-            }
-        }
-    }
-
-    // Delete module
-    public function destroy($id)
-    {
+    if ($validator->fails()) {
+        $data = [
+            'status' => 422,
+            'message' => $validator->messages()
+        ];
+        return response()->json($data, 422);
+    } else {
         $module = Module::find($id);
 
         if ($module == null) {
@@ -173,72 +169,98 @@ class ModuleController extends Controller
             ];
             return response()->json($data, 421);
         } else {
-            $module->delete();
+            $module->name = $request->name;
+            $module->description = $request->description;
+            $module->code = $request->code;
+            $module->duration = $request->duration;
+            $module->save();
             $data = [
                 'status' => 200,
-                'message' => 'Module deleted successfully'
+                'message' => 'Module updated successfully'
             ];
             return response()->json($data, 200);
         }
     }
+}
 
     // Delete module
-    public function destroyPermanent($id)
-    {
-        $module = Module::withTrashed()->find($id);
+public function destroy($id)
+{
+    $module = Module::find($id);
 
-        if ($module == null) {
-            $data = [
-                'status' => 421,
-                'message' => 'This module does not exist.'
-            ];
-            return response()->json($data, 421);
-        } else {
-            $module->forceDelete();
-            $data = [
-                'status' => 200,
-                'message' => 'Module deleted successfully'
-            ];
-            return response()->json($data, 200);
-        }
+    if ($module == null) {
+        $data = [
+            'status' => 421,
+            'message' => 'This module does not exist.'
+        ];
+        return response()->json($data, 421);
+    } else {
+        $module->delete();
+        $data = [
+            'status' => 200,
+            'message' => 'Module deleted successfully'
+        ];
+        return response()->json($data, 200);
     }
+}
+
+    // Delete module
+public function destroyPermanent($id)
+{
+    $module = Module::withTrashed()->find($id);
+
+    if ($module == null) {
+        $data = [
+            'status' => 421,
+            'message' => 'This module does not exist.'
+        ];
+        return response()->json($data, 421);
+    } else {
+        $module->forceDelete();
+        $data = [
+            'status' => 200,
+            'message' => 'Module deleted successfully'
+        ];
+        return response()->json($data, 200);
+    }
+}
 
     // Restore deleted module
-    public function restoreModule($id)
-    {
-        $module = Module::onlyTrashed()->find($id);
-        if ($module != null) {
-            $module->restore();
-            $data = [
-                'status' => 200,
-                'message' => 'Module successfully restored'
-            ];
-            return response()->json($data, 200);
-        } else {
-            $data = [
-                'status' => 400,
-                'message' => 'Module not found'
-            ];
-            return response()->json($data, 400);
-        }
+public function restoreModule($id)
+{
+    $module = Module::onlyTrashed()->find($id);
+    if ($module != null) {
+        $module->restore();
+        $data = [
+            'status' => 200,
+            'message' => 'Module successfully restored'
+        ];
+        return response()->json($data, 200);
+    } else {
+        $data = [
+            'status' => 400,
+            'message' => 'Module not found'
+        ];
+        return response()->json($data, 400);
     }
+}
 
 
     // Get module contents
-    public function getModuleContents($moduleId)
-    {
+public function getModuleContents($moduleId)
+{
         // verify connection
-        if (isset($_SESSION['admin'])) {
-            $user = $_SESSION['admin'];
-        } else if (isset($_SESSION['teacher'])) {
-            $user = $_SESSION['teacher'];
-        } else {
-            $data = [
-                'status' => 400,
-                'message' => 'User not connected'
-            ];
-            return response()->json($data, 400);
-        }
+    if (isset($_SESSION['admin'])) {
+        $user = $_SESSION['admin'];
+    } else if (isset($_SESSION['teacher'])) {
+        $user = $_SESSION['teacher'];
+    } else {
+        $data = [
+            'status' => 400,
+            'message' => 'User not connected'
+        ];
+        return response()->json($data, 400);
+    }
 
         $module = Module::find($moduleId); // test 
 
@@ -270,7 +292,7 @@ class ModuleController extends Controller
     ->where(function ($query) use ($user) {
         // Filter courses where the creator is the user OR assigned_to is the user
         $query->where('creator', $user)
-              ->orWhere('assigned_to', $user);
+        ->orWhere('assigned_to', $user);
     })
     ->get();
 
@@ -281,15 +303,15 @@ class ModuleController extends Controller
     //     ];
     //     return response()->json($data, 404);
     //} else {
-        $module->course_id = 0;
-        $module->contents = $moduleContents;
+    $module->course_id = 0;
+    $module->contents = $moduleContents;
 
-        $data = [
-            'status' => 200,
-            'module' => $module,
-            'courses' => $courses,
-        ];
-        return response()->json($data, 200);
+    $data = [
+        'status' => 200,
+        'module' => $module,
+        'courses' => $courses,
+    ];
+    return response()->json($data, 200);
     //}
 }
 }

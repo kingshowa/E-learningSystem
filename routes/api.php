@@ -33,6 +33,7 @@ $_SESSION['student'] = 3;
 
 // user
 Route::post('user', [UserController::class, 'store']);
+Route::get('teachers', [UserController::class, 'getTeachers']);
 
 //program
 Route::get('programs', [ProgramController::class, 'index']);
@@ -58,7 +59,7 @@ Route::get('courses/manage', [CourseController::class, 'manageCourses']);
 Route::get('courses/enrolled', [CourseController::class, 'enrolledCourses']);
 Route::get('course/restore/{id}', [CourseController::class, 'restoreCourse']); // retrieves deleted course
 Route::post('course', [CourseController::class, 'store']);
-Route::put('course/edit/{id}', [CourseController::class, 'update']);
+Route::post('course/edit/{id}', [CourseController::class, 'update']);
 Route::put('course/enable/{id}', [CourseController::class, 'updateStatus']);
 Route::put('course/completed/{id}', [CourseController::class, 'markCompleted']);
 Route::delete('course/delete/{id}', [CourseController::class, 'destroy']);
@@ -73,7 +74,7 @@ Route::get('modules', [ModuleController::class, 'index']); // not necesary
 Route::get('module/{id}', [ModuleController::class, 'getModuleById']);
 Route::get('modules/manage', [ModuleController::class, 'manageModules']);
 Route::post('module', [ModuleController::class, 'store']);
-Route::put('module/edit/{id}', [ModuleController::class, 'update']);
+Route::post('module/edit/{id}', [ModuleController::class, 'update']);
 Route::delete('module/delete/{id}', [ModuleController::class, 'destroy']);
 Route::delete('module/destroy/{id}', [ModuleController::class, 'destroyPermanent']);
 Route::get('module/restore/{id}', [ModuleController::class, 'restoreModule']);

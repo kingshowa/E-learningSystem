@@ -8,6 +8,15 @@ use Validator;
 
 class UserController extends Controller
 {
+    public function getTeachers()
+    {
+        $teachers = User::where('role', 'teacher')->get();
+        $data = [
+                'status' => 200,
+                'teachers' => $teachers
+            ];
+        return response()->json($data, 200);
+    }
     // Create a user
     public function store(Request $request)
     {
