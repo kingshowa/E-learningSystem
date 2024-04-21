@@ -258,6 +258,45 @@ class CourseController extends Controller
         }
     }
 
+    //Update course status: completed
+    public function markCompleted(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'completed' => 'required'
+        ]);
+
+        if ($validator->fails()) {
+            $data = [
+                'status' => 422,
+                'message' => $validator->messages()
+            ];
+
+            return response()->json($data, 422);
+        } else {
+            $course = Course::find($id);
+
+            if ($course == null) {
+                $data = [
+                    'status' => 421,
+                    'message' => 'This course does not exist.'
+                ];
+                return response()->json($data, 421);
+            } else {
+                $status = 'completed';
+                if ($request->completed == 0)
+                    $status = 'uncompleted';
+
+                $course->completed = $request->completed;
+                $course->save();
+                $data = [
+                    'status' => 200,
+                    'message' => 'Course ' . $status . ' successfully'
+                ];
+                return response()->json($data, 200);
+            }
+        }
+    }
+
     // Delete a course/ archive
     public function destroy($id)
     {

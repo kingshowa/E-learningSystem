@@ -60,6 +60,7 @@ Route::get('course/restore/{id}', [CourseController::class, 'restoreCourse']); /
 Route::post('course', [CourseController::class, 'store']);
 Route::put('course/edit/{id}', [CourseController::class, 'update']);
 Route::put('course/enable/{id}', [CourseController::class, 'updateStatus']);
+Route::put('course/completed/{id}', [CourseController::class, 'markCompleted']);
 Route::delete('course/delete/{id}', [CourseController::class, 'destroy']);
 Route::delete('course/destroy/{id}', [CourseController::class, 'destroyPermanent']);
 Route::post('course/add/module', [CourseController::class, 'addCourseModule']);
