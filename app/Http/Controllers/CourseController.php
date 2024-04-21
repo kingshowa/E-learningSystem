@@ -193,15 +193,31 @@ class CourseController extends Controller
                     'status' => 421,
                     'message' => 'This course does not exist.'
                 ];
-
+                
                 return response()->json($data, 421);
             } else {
+                if ($request->has('photo')) {
+                    $validator = Validator::make($request->all(), [
+                        'photo' => 'required|mimes:jpeg,jpg,png,tiff|max:5000', //Adjust max file size as needed
+                    ]);
+    
+                    if ($validator->fails()) {
+                        $data = [
+                            'status' => 422,
+                            'message' => $validator->messages()
+                        ];
+                
+                        return response()->json($data, 422);
+                    } else {
+                        $path = $request->file('photo')->store('images');
+                        $course->photo = $path;
+                    }
+                }
                 $course->name = $request->name;
                 $course->code = $request->code;
                 $course->description = $request->description;
                 $course->price = $request->price;
                 $course->level = $request->level;
-                $course->photo = $request->photo;
                 $course->creator = $request->creator;
                 $course->assigned_to = $request->assigned_to;
                 $course->completed = $request->completed;

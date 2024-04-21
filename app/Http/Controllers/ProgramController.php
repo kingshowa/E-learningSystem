@@ -111,7 +111,7 @@ class ProgramController extends Controller
                         'status' => 422,
                         'message' => $validator->messages()
                     ];
-                    $content->delete();
+            
                     return response()->json($data, 422);
                 } else {
                     $path = $request->file('photo')->store('images');
@@ -177,7 +177,6 @@ class ProgramController extends Controller
                         'status' => 422,
                         'message' => $validator->messages()
                     ];
-                    $content->delete();
                     return response()->json($data, 422);
                 } else {
                     $path = $request->file('photo')->store('images');
