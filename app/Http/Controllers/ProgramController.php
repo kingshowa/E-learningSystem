@@ -114,7 +114,7 @@ class ProgramController extends Controller
             
                     return response()->json($data, 422);
                 } else {
-                    $path = $request->file('photo')->store('images');
+                    $path = $request->file('photo')->store('public/images');
                     $program->photo = $path;
                 }
             }
@@ -179,7 +179,8 @@ class ProgramController extends Controller
                     ];
                     return response()->json($data, 422);
                 } else {
-                    $path = $request->file('photo')->store('images');
+                    Storage::delete($program->photo);
+                    $path = $request->file('photo')->store('public/images');
                     $program->photo = $path;
                 }
                 }
@@ -375,6 +376,8 @@ class ProgramController extends Controller
             ->where('program_courses.program_id', $programId)->get();
 
             $program->courses = $courses;
+            $program->photo = asset('storage/' . substr($program->photo, 7));
+
             $data = [
                 'status' => 200,
                 'program' => $program

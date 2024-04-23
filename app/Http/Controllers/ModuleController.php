@@ -92,7 +92,47 @@ class ModuleController extends Controller
         return response()->json($data, 200);
     }
 
+    public function manageModulesEx($courseId)
+    {
+        // verify connection
+        if (isset($_SESSION['admin'])) {
+            $user = $_SESSION['admin'];
+        } else if (isset($_SESSION['teacher'])) {
+            $user = $_SESSION['teacher'];
+        } else {
+            $data = [
+                'status' => 400,
+                'message' => 'User not connected'
+            ];
+            return response()->json($data, 400);
+        }
 
+        $modules = Module::select('modules.*')
+    ->where(function ($query) use ($user, $courseId) {
+        // Check if the user is a supervisor or creator of the module
+        $query->where(function ($subquery) use ($user) {
+            $subquery->whereExists(function ($existsQuery) use ($user) {
+                $existsQuery->select(DB::raw(1))
+                    ->from('users')
+                    ->whereColumn('modules.creator', 'users.id')
+                    ->where('users.supervisor', $user);
+            })
+            ->orWhere('creator', $user);
+        })
+        // Filter out modules that are associated with the specified course
+        ->whereDoesntHave('courses', function ($doesntHaveQuery) use ($courseId) {
+            $doesntHaveQuery->where('course_id', $courseId);
+        });
+    })
+    ->get();
+
+
+        $data = [
+            'status' => 200,
+            'modules' => $modules
+        ];
+        return response()->json($data, 200);
+    }
 
     // Create a module
     public function store(Request $request)
@@ -283,6 +323,8 @@ public function getModuleContents($moduleId)
 
         // Check if any results are returned
         if ($contentType->isNotEmpty()) {
+            $contentType->first()->link = asset('storage/' . substr($contentType->first()->link, 7));
+
             // Push the first item (object) of the collection into $moduleContents
             $moduleContents[] = $contentType->first();
         }

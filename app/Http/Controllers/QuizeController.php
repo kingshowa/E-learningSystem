@@ -40,9 +40,17 @@ class QuizeController extends Controller
         $quize = Quize::with('content', 'questions.options') // Load relationships
     ->findOrFail($quizeId);
 
-// Now $quize will contain the Quize object with its related questions, options, and the associated content
+        foreach ($quize->questions as $question) {
+            $question->imageUrl = asset('storage/' . substr($question->imageUrl, 7));
+            
+            foreach($question->options as $option){
+                if($option->type=="image"){
+                $option->data = asset('storage/' . substr($option->data, 7));
+                }
+            }
+        }
 
-
+        $quize->title=$quize->content->title;
         $data = [
             'status' => 200,
             'quize' => $quize
@@ -56,6 +64,18 @@ class QuizeController extends Controller
 
         $question = Question::with('options') // Load relationships
             ->findOrFail($questionId);
+
+        if($question->imageUrl!=null)
+            $question->imageUrl = asset('storage/' . substr($question->imageUrl, 7));
+        else
+            $question->imageUrl = "";
+
+        foreach($question->options as $option){
+            if($option->type=="image"){
+                $option->data = asset('storage/' . substr($option->data, 7));
+            }
+        }
+
         $data = [
             'status' => 200,
             'question' => $question
@@ -77,19 +97,12 @@ class QuizeController extends Controller
             ];
             return response()->json($data, 422);
         } else {
-            $quize = Quize::find($id);
-            if (!$quize) {
-                $data = [
-                    'status' => 404,
-                    'message' => 'Parameter error!'
-                ];
-                return response()->json($data, 404);
-            } else {
+            
                 // create question and choices
                 $question = new Question();
 
-                if ($request->has('image')) {
-                    $path = $request->file('image')->store('images');
+                if ($request->hasFile('imageUrl')) {
+                    $path = $request->file('imageUrl')->store('public/images');
                     $question->imageUrl = $path;
                 }
                 $question->quize_id = $id;
@@ -99,15 +112,15 @@ class QuizeController extends Controller
                 $data = [
                     'status' => 200,
                     'message' => 'Question successfully created!',
-                    'questionId' => $question->id
+                    'id' => $question->id
                 ];
                 return response()->json($data, 200);
-            }
+            
         }
     }
 
     // Create question
-    public function updateQuestion(Request $request, $id, $questionId)
+    public function updateQuestion(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
             "context" => "required",
@@ -119,22 +132,14 @@ class QuizeController extends Controller
             ];
             return response()->json($data, 422);
         } else {
-            $quize = Quize::find($id);
-            if (!$quize) {
-                $data = [
-                    'status' => 404,
-                    'message' => 'Parameter error!'
-                ];
-                return response()->json($data, 404);
-            } else {
-                // create question and choices
-                $question = Question::find($questionId);
+            
+                $question = Question::find($id);
 
-                if ($request->has('image')) {
+                if ($request->hasFile('imageUrl')) {
                     if ($question->imageUrl != null) {
                         Storage::delete($question->imageUrl);
                     }
-                    $path = $request->file('image')->store('images');
+                    $path = $request->file('imageUrl')->store('public/images');
                     $question->imageUrl = $path;
                 }
                 $question->context = $request->context;
@@ -142,30 +147,20 @@ class QuizeController extends Controller
 
                 $data = [
                     'status' => 200,
-                    'message' => 'Question successfully updated!',
-                    'question_id' => $question->id
+                    'message' => 'Question successfully updated!'
                 ];
                 return response()->json($data, 200);
-            }
         }
     }
 
     // Create option
     public function createOption(Request $request, $id)
     {
-        $question = Question::find($id);
-        if (!$question) {
-            $data = [
-                'status' => 404,
-                'message' => 'Parameter error!'
-            ];
-            return response()->json($data, 404);
-        } else {
             // create option
             $option = new Option();
 
-            if ($request->has('image')) {
-                $path = $request->file('image')->store('images');
+            if ($request->hasFile('image')) {
+                $path = $request->file('image')->store('public/images');
                 $option->data = $path;
                 $option->type = 'image';
             } else {
@@ -185,7 +180,9 @@ class QuizeController extends Controller
             }
             $option->question_id = $id;
             $option->isCorrect = $request->isCorrect;
-            $option->weight = $request->weight;
+            $option->weight = 0;
+            if( $request->isCorrect)
+                $option->weight = 1;
             $option->save();
 
             $data = [
@@ -193,27 +190,18 @@ class QuizeController extends Controller
                 'message' => 'Option successfully created!'
             ];
             return response()->json($data, 200);
-        }
+        
     }
 
     // Update option
-    public function updateOption(Request $request, $id, $optionId)
+    public function updateOption(Request $request, $id)
     {
-        $question = Question::find($id);
-        if (!$question) {
-            $data = [
-                'status' => 404,
-                'message' => 'Parameter error!'
-            ];
-            return response()->json($data, 404);
-        } else {
+        
             // find option
-            $option = Option::find($optionId);
-            if ($option->type == "image") {
+            $option = Option::find($id);
+            if ($request->hasFile('data')) {
                 Storage::delete($option->data);
-            }
-            if ($request->has('image')) {
-                $path = $request->file('image')->store('images');
+                $path = $request->file('data')->store('public/images');
                 $option->data = $path;
                 $option->type = 'image';
             } else {
@@ -240,7 +228,7 @@ class QuizeController extends Controller
                 'message' => 'Option successfully updated!'
             ];
             return response()->json($data, 200);
-        }
+        
     }
 
     // delete quetion

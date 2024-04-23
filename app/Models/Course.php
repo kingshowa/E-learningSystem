@@ -22,4 +22,14 @@ class Course extends Model
         'completed',
         'enabled',
     ];
+
+    public function modules()
+    {
+        return $this->belongsToMany(Module::class, 'course_modules');
+    }
+
+    public function programs()
+    {
+        return $this->belongsToMany(Program::class, 'program_courses');
+    }
 }

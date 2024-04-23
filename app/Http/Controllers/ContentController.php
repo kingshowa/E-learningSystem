@@ -35,6 +35,100 @@ class ContentController extends Controller
         }
     }
 
+    // Get document
+    public function getDocument($id)
+    {
+        $document = Document::find($id);
+        $content = Content::find($document->content_id);
+
+        if ($document == null) {
+            $data = [
+                'status' => 400,
+                'message' => 'Content not found'
+            ];
+            return response()->json($data, 400);
+        } else {
+            $document->title=$content->title;
+            $document->link = asset('storage/' . substr($document->link, 7));
+
+            $data = [
+                'status' => 200,
+                'document' => $document
+            ];
+            return response()->json($data, 200);
+        }
+    }
+
+    // Get document
+    public function getImage($id)
+    {
+        $image = Image::find($id);
+        $content = Content::find($image->content_id);
+
+        if ($image == null) {
+            $data = [
+                'status' => 400,
+                'message' => 'Content not found'
+            ];
+            return response()->json($data, 400);
+        } else {
+            $image->title=$content->title;
+            $image->link = asset('storage/' . substr($image->link, 7));
+
+            $data = [
+                'status' => 200,
+                'image' => $image
+            ];
+            return response()->json($data, 200);
+        }
+    }
+
+    // Get video
+    public function getVideo($id)
+    {
+        $video = Video::find($id);
+        $content = Content::find($video->content_id);
+
+        if ($video == null) {
+            $data = [
+                'status' => 400,
+                'message' => 'Content not found'
+            ];
+            return response()->json($data, 400);
+        } else {
+            $video->title=$content->title;
+            $video->link = asset('storage/' . substr($video->link, 7));
+
+            $data = [
+                'status' => 200,
+                'video' => $video
+            ];
+            return response()->json($data, 200);
+        }
+    }
+
+    // Get document
+    public function getText($id)
+    {
+        $text = Text::find($id);
+        $content = Content::find($text->content_id);
+
+        if ($text == null) {
+            $data = [
+                'status' => 400,
+                'message' => 'Content not found'
+            ];
+            return response()->json($data, 400);
+        } else {
+            $text->title=$content->title;
+            $data = [
+                'status' => 200,
+                'text' => $text
+            ];
+            return response()->json($data, 200);
+        }
+    }
+
     // Create content
     public function store(Request $request)
     {
@@ -63,7 +157,6 @@ class ContentController extends Controller
             $content->module_id = $request->moduleId;
             $content->type = $request->type;
             $content->title = $request->title;
-            $content->title = $request->title;
             $content->duration = $request->duration;
             $content->save();
 
@@ -73,7 +166,7 @@ class ContentController extends Controller
                 $video = new Video();
 
                 // when it is an uploaded file
-                if ($request->has('videoFile')) { // must put a field name='videoFile'
+                if ($request->hasFile('video')) { // must put a field name='videoFile'
 
                     $validator = Validator::make($request->all(), [
                         'video' => 'required|mimes:mp4,mov,avi', //max:2048 Adjust max file size as needed
@@ -87,7 +180,7 @@ class ContentController extends Controller
                         $content->delete();
                         return response()->json($data, 422);
                     } else {
-                        $path = $request->file('video')->store('videos');
+                        $path = $request->file('video')->store('public/videos');
                         $video->uploaded = true;
                     }
                 } else { //  when it is an external link
@@ -127,10 +220,10 @@ class ContentController extends Controller
                     $content->delete();
                     return response()->json($data, 422);
                 } else {
-                    $path = $request->file('image')->store('images');
+                    $path = $request->file('image')->store('public/images');
+                    $image->link = $path;
                 }
                 $image->content_id = $contentId;
-                $image->link = $path;
                 $image->caption = $request->caption;
                 $image->save();
             } else if ($request->type == 'document') { // create document
@@ -148,10 +241,10 @@ class ContentController extends Controller
                     $content->delete();
                     return response()->json($data, 422);
                 } else {
-                    $path = $request->file('document')->store('documents');
+                    $path = $request->file('document')->store('public/documents');
+                    $document->link = $path;
                 }
                 $document->content_id = $contentId;
-                $document->link = $path;
                 $document->caption = $request->caption;
                 $document->save();
             } else if ($request->type == 'text') {  // create yext
@@ -234,6 +327,8 @@ class ContentController extends Controller
     public function updateVideo(Request $request, $id)
     {
         $video = Video::find($id);
+        $content = Content::find($video->content_id);
+
         if ($video == null) {
             $data = [
                 'status' => 404,
@@ -241,14 +336,10 @@ class ContentController extends Controller
             ];
             return response()->json($data, 404);
         } else {
-            if ($video->uploaded == 1) {
-                // Delete the old video file from storage
-                Storage::delete($video->link);
-            }
 
             // when it is an uploaded file
-            if ($request->has('videoFile')) { // must put a field name='videoFile'
-
+            if ($request->hasFile('video')) { 
+                
                 $validator = Validator::make($request->all(), [
                     'video' => 'required|mimes:mp4,mov,avi', //max:2048 Adjust max file size as needed
                 ]);
@@ -260,8 +351,10 @@ class ContentController extends Controller
                     ];
                     return response()->json($data, 422);
                 } else {
-                    $path = $request->file('video')->store('videos');
+                    Storage::delete($video->link);
+                    $path = $request->file('video')->store('public/videos');
                     $video->uploaded = true;
+                    $video->link = $path;
                 }
             } else { //  when it is an external link
                 $validator = Validator::make($request->all(), [
@@ -278,11 +371,14 @@ class ContentController extends Controller
                     $video->uploaded = false;
                 }
             }
-            $video->link = $path;
+            
             $video->caption = $request->caption;
             $video->start = $request->start;
             $video->end = $request->end;
             $video->save();
+
+            $content->title=$request->title;
+            $content->save();
 
             $data = [
                 'status' => 200,
@@ -296,6 +392,7 @@ class ContentController extends Controller
     public function updateImage(Request $request, $id)
     {
         $image = Image::find($id);
+        $content = Content::find($image->content_id);
 
         if ($image == null) {
             $data = [
@@ -304,7 +401,7 @@ class ContentController extends Controller
             ];
             return response()->json($data, 404);
         } else {
-            Storage::delete($image->link);
+            if($request->hasFile('image')){
             $validator = Validator::make($request->all(), [
                 'image' => 'required|mimes:jpeg,jpg,png,tiff|max:5000', //Adjust max file size as needed
             ]);
@@ -316,11 +413,18 @@ class ContentController extends Controller
                 ];
                 return response()->json($data, 422);
             } else {
-                $path = $request->file('image')->store('images');
+                Storage::delete($image->link);
+                $path = $request->file('image')->store('public/images');
+                $image->link = $path;
             }
-            $image->link = $path;
+
+            }
+            
             $image->caption = $request->caption;
             $image->save();
+
+            $content->title=$request->title;
+            $content->save();
 
             $data = [
                 'status' => 200,
@@ -334,6 +438,7 @@ class ContentController extends Controller
     public function updateDocument(Request $request, $id)
     {
         $document = Document::find($id);
+        $content = Content::find($document->content_id);
 
         if ($document == null) {
             $data = [
@@ -342,25 +447,31 @@ class ContentController extends Controller
             ];
             return response()->json($data, 404);
         } else {
-            Storage::delete($document->link);
+            if($request->hasFile('document')){
 
-            $validator = Validator::make($request->all(), [
-                'document' => 'required|mimes:pdf,docx,xlsx,txt,pptx,xml,html', //Adjust max file size as needed
-            ]);
+                $validator = Validator::make($request->all(), [
+                    'document' => 'required|mimes:pdf,docx,xlsx,txt,pptx,xml,html', //Adjust max file size as needed
+                ]);
 
-            if ($validator->fails()) {
-                $data = [
-                    'status' => 422,
-                    'message' => $validator->messages()
-                ];
-                return response()->json($data, 422);
-            } else {
-                $path = $request->file('document')->store('documents');
+                if ($validator->fails()) {
+                    $data = [
+                        'status' => 422,
+                        'message' => $validator->messages()
+                    ];
+                    return response()->json($data, 422);
+                } else {
+                    Storage::delete($document->link);
+
+                    $path = $request->file('document')->store('public/documents');
+                    $document->link = $path;
+                }
             }
-            $document->link = $path;
+            
             $document->caption = $request->caption;
             $document->save();
 
+            $content->title=$request->title;
+            $content->save();
             $data = [
                 'status' => 200,
                 'message' => 'Document updated!'
@@ -373,6 +484,7 @@ class ContentController extends Controller
     public function updateText(Request $request, $id)
     {
         $text = Text::find($id);
+        $content = Content::find($text->content_id);
 
         if ($text == null) {
             $data = [
@@ -392,8 +504,12 @@ class ContentController extends Controller
                 ];
                 return response()->json($data, 422);
             } else {
+
                 $text->data = $request->data;
                 $text->save();
+
+                $content->title=$request->title;
+                $content->save();
 
                 $data = [
                     'status' => 200,
@@ -408,6 +524,7 @@ class ContentController extends Controller
     public function updateQuize(Request $request, $id)
     {
         $quize = Quize::find($id);
+        $content = Content::find($request->content_id);
 
         if ($quize == null) {
             $data = [
@@ -432,6 +549,9 @@ class ContentController extends Controller
                 $quize->pass_percentage = $request->pass_percentage;
                 $quize->instruction = $request->instruction;
                 $quize->save();
+
+                $content->title=$request->title;
+                $content->save();
 
                 $data = [
                     'status' => 200,

@@ -18,4 +18,9 @@ class Program extends Model
         'creator',
         'enabled',
     ];
+
+    public function courses()
+    {
+        return $this->belongsToMany(Course::class, 'program_courses');
+    }
 }

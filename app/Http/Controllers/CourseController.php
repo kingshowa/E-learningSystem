@@ -9,6 +9,10 @@ use App\Models\Course;
 use App\Models\Module;
 use App\Models\User;
 use App\Models\CourseModule;
+use App\Models\ProgramCourse;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+
 use Validator;
 
 class CourseController extends Controller
@@ -100,6 +104,49 @@ class CourseController extends Controller
         return response()->json($data, 200);
     }
 
+    // Get admin/teacher courses: can be deleted or not, supervised courses, created, assigned to
+    public function manageCoursesEx($programId)
+    {
+        // verify connection
+        if (isset($_SESSION['admin'])) {
+            $user = $_SESSION['admin'];
+        } else if (isset($_SESSION['teacher'])) {
+            $user = $_SESSION['teacher'];
+        } else {
+            $data = [
+                'status' => 400,
+                'message' => 'User not connected'
+            ];
+            return response()->json($data, 400);
+        }
+        
+
+    $courses = Course::select('courses.*')
+    ->where(function ($query) use ($user, $programId) {
+        // Check if the user is a supervisor or creator of the course
+        $query->where(function ($subquery) use ($user) {
+            $subquery->whereExists(function ($existsQuery) use ($user) {
+                $existsQuery->select(DB::raw(1))
+                    ->from('users')
+                    ->whereColumn('courses.creator', 'users.id')
+                    ->where('users.supervisor', $user);
+            })
+            ->orWhere('creator', $user);
+        })
+        // Filter out courses that are associated with the specified program
+        ->whereDoesntHave('programs', function ($doesntHaveQuery) use ($programId) {
+            $doesntHaveQuery->where('program_id', $programId);
+        });
+    })
+    ->get();
+
+        $data = [
+            'status' => 200,
+            'courses' => $courses,
+        ];
+        return response()->json($data, 200);
+    }
+
     //List of enrolled courses by a student
     public function enrolledCourses()
     {
@@ -137,7 +184,7 @@ class CourseController extends Controller
             ];
             return response()->json($data, 400);
         }
-        
+
         $validator = Validator::make($request->all(), [
             'name' => 'required',
             'description' => 'required'
@@ -166,7 +213,7 @@ class CourseController extends Controller
                 
                         return response()->json($data, 422);
                     } else {
-                        $path = $request->file('photo')->store('images');
+                        $path = $request->file('photo')->store('public/images');
                         $course->photo = $path;
                     }
                 }
@@ -184,6 +231,16 @@ class CourseController extends Controller
                 $disc = new Discussion();
                 $disc->course_id = $course->id;
                 $disc->save();
+
+                if($request->has('program_id')){
+                    $programCourse = new ProgramCourse();
+
+                    $programCourse->course_id = $course->id;
+                    $programCourse->program_id = $request->program_id;
+
+                    $programCourse->save();
+                }
+
                 $data = [
                     'status' => 200,
                     'message' => 'Course created successfully'
@@ -238,7 +295,8 @@ class CourseController extends Controller
                 
                         return response()->json($data, 422);
                     } else {
-                        $path = $request->file('photo')->store('images');
+                        Storage::delete($course->photo);
+                        $path = $request->file('photo')->store('public/images');
                         $course->photo = $path;
                     }
                 }
@@ -479,22 +537,14 @@ class CourseController extends Controller
 
         $teachers = User::where('role', '=', 'teacher')->get();
 
-        // if ($courseModules->isEmpty()) {
-        //     $data = [
-        //         'status' => 404,
-        //         'message' => 'There are no modules in this course, add new module!'
-        //     ];
-        //     return response()->json($data, 404);
-        // } else {
             $course->modules = $courseModules;
-
+            $course->photo = asset('storage/' . substr($course->photo, 7));
             $data = [
                 'status' => 200,
                 'course' => $course,
                 'teachers' => $teachers,
             ];
             return response()->json($data, 200);
-        // }
     }
 
     // Enroll into a course

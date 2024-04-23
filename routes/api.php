@@ -56,6 +56,7 @@ Route::get('programs/enrolled', [ProgramController::class, 'enrolledPrograms']);
 Route::get('courses', [CourseController::class, 'index']);
 Route::get('course/{id}', [CourseController::class, 'getCourseById']);
 Route::get('courses/manage', [CourseController::class, 'manageCourses']);
+Route::get('courses/manage/{programId}', [CourseController::class, 'manageCoursesEx']);
 Route::get('courses/enrolled', [CourseController::class, 'enrolledCourses']);
 Route::get('course/restore/{id}', [CourseController::class, 'restoreCourse']); // retrieves deleted course
 Route::post('course', [CourseController::class, 'store']);
@@ -73,6 +74,7 @@ Route::get('course/register/{id}', [CourseController::class, 'registerCourse']);
 Route::get('modules', [ModuleController::class, 'index']); // not necesary
 Route::get('module/{id}', [ModuleController::class, 'getModuleById']);
 Route::get('modules/manage', [ModuleController::class, 'manageModules']);
+Route::get('modules/manage/{courseId}', [ModuleController::class, 'manageModulesEx']);
 Route::post('module', [ModuleController::class, 'store']);
 Route::post('module/edit/{id}', [ModuleController::class, 'update']);
 Route::delete('module/delete/{id}', [ModuleController::class, 'destroy']);
@@ -87,14 +89,18 @@ Route::delete('content/delete/{id}', [ContentController::class, 'destroy']);
 Route::post('content/video/edit/{id}', [ContentController::class, 'updateVideo']);
 Route::post('content/image/edit/{id}', [ContentController::class, 'updateImage']);
 Route::post('content/document/edit/{id}', [ContentController::class, 'updateDocument']);
+Route::get('content/document/{id}', [ContentController::class, 'getDocument']);
+Route::get('content/image/{id}', [ContentController::class, 'getImage']);
+Route::get('content/video/{id}', [ContentController::class, 'getVideo']);
+Route::get('content/text/{id}', [ContentController::class, 'getText']);
 Route::put('content/text/edit/{id}', [ContentController::class, 'updateText']);
 Route::put('content/quize/edit/{id}', [ContentController::class, 'updateQuize']);
 
 // quize
-Route::post('quize/question/{id}', [QuizeController::class, 'createQuestion']);
-Route::post('quize/option/{id}', [QuizeController::class, 'createOption']);
-Route::post('quize/question/{id}/{questionId}', [QuizeController::class, 'updateQuestion']);
-Route::post('quize/option/{id}/{optionId}', [QuizeController::class, 'updateOption']);
+Route::post('question/{id}', [QuizeController::class, 'createQuestion']);
+Route::post('option/{id}', [QuizeController::class, 'createOption']);
+Route::post('quize/question/{id}', [QuizeController::class, 'updateQuestion']);
+Route::post('quize/option/{id}', [QuizeController::class, 'updateOption']);
 Route::delete('quize/question/{id}', [QuizeController::class, 'deleteQuestion']);
 Route::delete('quize/option/{id}', [QuizeController::class, 'deleteOption']);
 Route::get('quize/questions/{id}', [QuizeController::class, 'index']);

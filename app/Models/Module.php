@@ -17,4 +17,9 @@ class Module extends Model
         'duration',
         'creator',
     ];
+
+    public function courses()
+    {
+        return $this->belongsToMany(Course::class, 'course_modules');
+    }
 }
