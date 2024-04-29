@@ -26,4 +26,14 @@ class Message extends Model
     {
         return $this->belongsTo(Post::class);
     }
+
+    public function sender()
+    {
+        return $this->belongsTo(User::class, 'sent_by');
+    }
+
+    public function receiver()
+    {
+        return $this->belongsTo(User::class, 'sent_to');
+    }
 }

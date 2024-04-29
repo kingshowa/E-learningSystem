@@ -13,6 +13,7 @@ use App\Models\Module;
 use Validator;
 use Illuminate\Support\Facades\Storage;
 
+
 class ContentController extends Controller
 {
     // Get content by id
@@ -48,7 +49,7 @@ class ContentController extends Controller
             ];
             return response()->json($data, 400);
         } else {
-            $document->title=$content->title;
+            $document->title = $content->title;
             $document->link = asset('storage/' . substr($document->link, 7));
 
             $data = [
@@ -72,7 +73,7 @@ class ContentController extends Controller
             ];
             return response()->json($data, 400);
         } else {
-            $image->title=$content->title;
+            $image->title = $content->title;
             $image->link = asset('storage/' . substr($image->link, 7));
 
             $data = [
@@ -96,7 +97,7 @@ class ContentController extends Controller
             ];
             return response()->json($data, 400);
         } else {
-            $video->title=$content->title;
+            $video->title = $content->title;
             $video->link = asset('storage/' . substr($video->link, 7));
 
             $data = [
@@ -120,7 +121,7 @@ class ContentController extends Controller
             ];
             return response()->json($data, 400);
         } else {
-            $text->title=$content->title;
+            $text->title = $content->title;
             $data = [
                 'status' => 200,
                 'text' => $text
@@ -338,8 +339,8 @@ class ContentController extends Controller
         } else {
 
             // when it is an uploaded file
-            if ($request->hasFile('video')) { 
-                
+            if ($request->hasFile('video')) {
+
                 $validator = Validator::make($request->all(), [
                     'video' => 'required|mimes:mp4,mov,avi', //max:2048 Adjust max file size as needed
                 ]);
@@ -371,13 +372,13 @@ class ContentController extends Controller
                     $video->uploaded = false;
                 }
             }
-            
+
             $video->caption = $request->caption;
             $video->start = $request->start;
             $video->end = $request->end;
             $video->save();
 
-            $content->title=$request->title;
+            $content->title = $request->title;
             $content->save();
 
             $data = [
@@ -401,29 +402,29 @@ class ContentController extends Controller
             ];
             return response()->json($data, 404);
         } else {
-            if($request->hasFile('image')){
-            $validator = Validator::make($request->all(), [
-                'image' => 'required|mimes:jpeg,jpg,png,tiff|max:5000', //Adjust max file size as needed
-            ]);
+            if ($request->hasFile('image')) {
+                $validator = Validator::make($request->all(), [
+                    'image' => 'required|mimes:jpeg,jpg,png,tiff|max:5000', //Adjust max file size as needed
+                ]);
 
-            if ($validator->fails()) {
-                $data = [
-                    'status' => 422,
-                    'message' => $validator->messages()
-                ];
-                return response()->json($data, 422);
-            } else {
-                Storage::delete($image->link);
-                $path = $request->file('image')->store('public/images');
-                $image->link = $path;
+                if ($validator->fails()) {
+                    $data = [
+                        'status' => 422,
+                        'message' => $validator->messages()
+                    ];
+                    return response()->json($data, 422);
+                } else {
+                    Storage::delete($image->link);
+                    $path = $request->file('image')->store('public/images');
+                    $image->link = $path;
+                }
+
             }
 
-            }
-            
             $image->caption = $request->caption;
             $image->save();
 
-            $content->title=$request->title;
+            $content->title = $request->title;
             $content->save();
 
             $data = [
@@ -447,7 +448,7 @@ class ContentController extends Controller
             ];
             return response()->json($data, 404);
         } else {
-            if($request->hasFile('document')){
+            if ($request->hasFile('document')) {
 
                 $validator = Validator::make($request->all(), [
                     'document' => 'required|mimes:pdf,docx,xlsx,txt,pptx,xml,html', //Adjust max file size as needed
@@ -466,11 +467,11 @@ class ContentController extends Controller
                     $document->link = $path;
                 }
             }
-            
+
             $document->caption = $request->caption;
             $document->save();
 
-            $content->title=$request->title;
+            $content->title = $request->title;
             $content->save();
             $data = [
                 'status' => 200,
@@ -508,7 +509,7 @@ class ContentController extends Controller
                 $text->data = $request->data;
                 $text->save();
 
-                $content->title=$request->title;
+                $content->title = $request->title;
                 $content->save();
 
                 $data = [
@@ -550,7 +551,7 @@ class ContentController extends Controller
                 $quize->instruction = $request->instruction;
                 $quize->save();
 
-                $content->title=$request->title;
+                $content->title = $request->title;
                 $content->save();
 
                 $data = [

@@ -12,6 +12,8 @@ use App\Models\CourseModule;
 use App\Models\ProgramCourse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+
 
 use Validator;
 
@@ -60,46 +62,23 @@ class CourseController extends Controller
     // Get admin/teacher courses: can be deleted or not, supervised courses, created, assigned to
     public function manageCourses(Request $request)
     {
-        // verify connection
-        if (isset($_SESSION['admin'])) {
-            $user = $_SESSION['admin'];
-        } else if (isset($_SESSION['teacher'])) {
-            $user = $_SESSION['teacher'];
-        } else {
-            $data = [
-                'status' => 400,
-                'message' => 'User not connected'
-            ];
-            return response()->json($data, 400);
-        }
+        $user = Auth::user()->id;
 
-        
-            // deleted courses for a user
+        // deleted courses for a user
         $deleted_courses = Course::onlyTrashed()->where('creator', $user)->get();
 
-        // if ($request->has('supervise')) {
-        //     // Admin gets courses of the teachers he supervises
-        //     $courses = Course::select('courses.*')
-        //         ->join('users', 'courses.creator', '=', 'users.id')
-        //         ->where('users.supervisor', '=', $user)
-        //         ->get();
-        // } else {
-        //     // Get courses assigned to the user and courses created by user: teacher or admin
-        //     $courses = Course::where('creator', $user)->orWhere('assigned_to', $user)->get();
-        // }
-
         $courses = Course::select('courses.*')
-    ->where(function ($query) use ($user) {
-        // Filter courses where the creator is the user OR assigned_to is the user
-        $query->where('creator', $user)
-              ->orWhere('assigned_to', $user);
-    })
-    ->get();
+            ->where(function ($query) use ($user) {
+                // Filter courses where the creator is the user OR assigned_to is the user
+                $query->where('creator', $user)
+                    ->orWhere('assigned_to', $user);
+            })
+            ->get();
 
         $data = [
             'status' => 200,
             'courses' => $courses,
-            'deleted_courses'=> $deleted_courses,
+            'deleted_courses' => $deleted_courses,
         ];
         return response()->json($data, 200);
     }
@@ -107,38 +86,26 @@ class CourseController extends Controller
     // Get admin/teacher courses: can be deleted or not, supervised courses, created, assigned to
     public function manageCoursesEx($programId)
     {
-        // verify connection
-        if (isset($_SESSION['admin'])) {
-            $user = $_SESSION['admin'];
-        } else if (isset($_SESSION['teacher'])) {
-            $user = $_SESSION['teacher'];
-        } else {
-            $data = [
-                'status' => 400,
-                'message' => 'User not connected'
-            ];
-            return response()->json($data, 400);
-        }
-        
+        $user = Auth::user()->id;
 
-    $courses = Course::select('courses.*')
-    ->where(function ($query) use ($user, $programId) {
-        // Check if the user is a supervisor or creator of the course
-        $query->where(function ($subquery) use ($user) {
-            $subquery->whereExists(function ($existsQuery) use ($user) {
-                $existsQuery->select(DB::raw(1))
-                    ->from('users')
-                    ->whereColumn('courses.creator', 'users.id')
-                    ->where('users.supervisor', $user);
+        $courses = Course::select('courses.*')
+            ->where(function ($query) use ($user, $programId) {
+                // Check if the user is a supervisor or creator of the course
+                $query->where(function ($subquery) use ($user) {
+                    $subquery->whereExists(function ($existsQuery) use ($user) {
+                        $existsQuery->select(DB::raw(1))
+                            ->from('users')
+                            ->whereColumn('courses.creator', 'users.id')
+                            ->where('users.supervisor', $user);
+                    })
+                        ->orWhere('creator', $user);
+                })
+                    // Filter out courses that are associated with the specified program
+                    ->whereDoesntHave('programs', function ($doesntHaveQuery) use ($programId) {
+                    $doesntHaveQuery->where('program_id', $programId);
+                });
             })
-            ->orWhere('creator', $user);
-        })
-        // Filter out courses that are associated with the specified program
-        ->whereDoesntHave('programs', function ($doesntHaveQuery) use ($programId) {
-            $doesntHaveQuery->where('program_id', $programId);
-        });
-    })
-    ->get();
+            ->get();
 
         $data = [
             'status' => 200,
@@ -150,40 +117,23 @@ class CourseController extends Controller
     //List of enrolled courses by a student
     public function enrolledCourses()
     {
-        // Verify connection
-        if (!isset($_SESSION['student'])) {
-            $data = [
-                'status' => 400,
-                'message' => 'User not connected'
-            ];
-            return response()->json($data, 400);
-        } else {
-            $courses = Course::select('courses.*')
-                ->join('enrollments', 'courses.id', '=', 'enrollments.course_id')
-                ->where('enrollments.user_id', $_SESSION['student'])->get();
-            $data = [
-                'status' => 200,
-                'courses' => $courses
-            ];
-            return response()->json($data, 200);
-        }
+        $user = Auth::user()->id;
+
+        $courses = Course::select('courses.*')
+            ->join('enrollments', 'courses.id', '=', 'enrollments.course_id')
+            ->where('enrollments.user_id', $user)->get();
+        $data = [
+            'status' => 200,
+            'courses' => $courses
+        ];
+        return response()->json($data, 200);
+
     }
 
     // Create a new course
     public function store(Request $request)
     {
-        // verify connection
-        if (isset($_SESSION['admin'])) {
-            $user = $_SESSION['admin'];
-        } else if (isset($_SESSION['teacher'])) {
-            $user = $_SESSION['teacher'];
-        } else {
-            $data = [
-                'status' => 400,
-                'message' => 'User not connected'
-            ];
-            return response()->json($data, 400);
-        }
+        $user = Auth::user()->id;
 
         $validator = Validator::make($request->all(), [
             'name' => 'required',
@@ -201,22 +151,22 @@ class CourseController extends Controller
             $course = new Course;
 
             if ($request->hasFile('photo')) {
-                    $validator = Validator::make($request->all(), [
-                        'photo' => 'required|mimes:jpeg,jpg,png,tiff|max:5000', //Adjust max file size as needed
-                    ]);
-    
-                    if ($validator->fails()) {
-                        $data = [
-                            'status' => 422,
-                            'message' => $validator->messages()
-                        ];
-                
-                        return response()->json($data, 422);
-                    } else {
-                        $path = $request->file('photo')->store('public/images');
-                        $course->photo = $path;
-                    }
+                $validator = Validator::make($request->all(), [
+                    'photo' => 'required|mimes:jpeg,jpg,png,tiff|max:5000', //Adjust max file size as needed
+                ]);
+
+                if ($validator->fails()) {
+                    $data = [
+                        'status' => 422,
+                        'message' => $validator->messages()
+                    ];
+
+                    return response()->json($data, 422);
+                } else {
+                    $path = $request->file('photo')->store('public/images');
+                    $course->photo = $path;
                 }
+            }
             $course->name = $request->name;
             $course->code = $request->code;
             $course->description = $request->description;
@@ -232,7 +182,7 @@ class CourseController extends Controller
                 $disc->course_id = $course->id;
                 $disc->save();
 
-                if($request->has('program_id')){
+                if ($request->has('program_id')) {
                     $programCourse = new ProgramCourse();
 
                     $programCourse->course_id = $course->id;
@@ -279,20 +229,20 @@ class CourseController extends Controller
                     'status' => 421,
                     'message' => 'This course does not exist.'
                 ];
-                
+
                 return response()->json($data, 421);
             } else {
                 if ($request->hasFile('photo')) {
                     $validator = Validator::make($request->all(), [
                         'photo' => 'required|mimes:jpeg,jpg,png,tiff|max:5000', //Adjust max file size as needed
                     ]);
-    
+
                     if ($validator->fails()) {
                         $data = [
                             'status' => 422,
                             'message' => $validator->messages()
                         ];
-                
+
                         return response()->json($data, 422);
                     } else {
                         Storage::delete($course->photo);
@@ -537,50 +487,44 @@ class CourseController extends Controller
 
         $teachers = User::where('role', '=', 'teacher')->get();
 
-            $course->modules = $courseModules;
-            $course->photo = asset('storage/' . substr($course->photo, 7));
-            $data = [
-                'status' => 200,
-                'course' => $course,
-                'teachers' => $teachers,
-            ];
-            return response()->json($data, 200);
+        $course->modules = $courseModules;
+        $course->photo = asset('storage/' . substr($course->photo, 7));
+        $data = [
+            'status' => 200,
+            'course' => $course,
+            'teachers' => $teachers,
+        ];
+        return response()->json($data, 200);
     }
 
     // Enroll into a course
     public function registerCourse($courseId)
     {
-        // Verify connection
-        if (!isset($_SESSION['student'])) {
+        $user = Auth::user()->id;
+
+        // register
+        $registered = Enrollment::where('user_id', $user)
+            ->where('course_id', $courseId)->get();
+
+        if ($registered->isEmpty()) {
+            $enrollment = new Enrollment();
+
+            $enrollment->course_id = $courseId;
+            $enrollment->user_id = $user;
+
+            $enrollment->save();
+
             $data = [
-                'status' => 400,
-                'message' => 'User not connected'
+                'status' => 200,
+                'message' => 'Registration is successfull.'
             ];
-            return response()->json($data, 400);
-        } else { // register
-            $registered = Enrollment::where('user_id', $_SESSION['student'])
-                ->where('course_id', $courseId)->get();
-
-            if ($registered->isEmpty()) {
-                $enrollment = new Enrollment();
-
-                $enrollment->course_id = $courseId;
-                $enrollment->user_id = $_SESSION['student'];
-
-                $enrollment->save();
-
-                $data = [
-                    'status' => 200,
-                    'message' => 'Registration is successfull.'
-                ];
-                return response()->json($data, 200);
-            } else {
-                $data = [
-                    'status' => 401,
-                    'message' => 'Already registered in this course.'
-                ];
-                return response()->json($data, 401);
-            }
+            return response()->json($data, 200);
+        } else {
+            $data = [
+                'status' => 401,
+                'message' => 'Already registered in this course.'
+            ];
+            return response()->json($data, 401);
         }
     }
 

@@ -9,6 +9,8 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
+
 
 class ProgramController extends Controller
 {
@@ -47,23 +49,13 @@ class ProgramController extends Controller
     // Get admin programs: can be deleted or not
     public function getAdminPrograms(Request $request)
     {
-        // just for development // will use // $user = Auth::user()->id;
-        if (isset ($_SESSION['admin'])) {
-            $user = $_SESSION['admin'];
-        } else {
-            $data = [
-                'status' => 400,
-                'message' => 'User not connected'
-            ];
-            return response()->json($data, 400);
-        }
+        $user = Auth::user()->id;
 
-        
         $deleted_programs = Program::onlyTrashed()->where('creator', $user)->get();
-        
-            // all programs created by a user
+
+        // all programs created by a user
         $programs = Program::where('creator', $user)->get();
-        
+
         $data = [
             'status' => 200,
             'programs' => $programs,
@@ -75,16 +67,7 @@ class ProgramController extends Controller
     //create and save new program
     public function store(Request $request)
     {
-        // verify connection
-        if (isset ($_SESSION['admin'])) {
-            $user = $_SESSION['admin'];
-        } else {
-            $data = [
-                'status' => 400,
-                'message' => 'User not connected'
-            ];
-            return response()->json($data, 400);
-        }
+        $user = Auth::user()->id;
 
         $validator = Validator::make($request->all(), [
             'name' => 'required',
@@ -111,7 +94,7 @@ class ProgramController extends Controller
                         'status' => 422,
                         'message' => $validator->messages()
                     ];
-            
+
                     return response()->json($data, 422);
                 } else {
                     $path = $request->file('photo')->store('public/images');
@@ -168,21 +151,21 @@ class ProgramController extends Controller
                 return response()->json($data, 421);
             } else {
                 if ($request->hasFile('photo')) {
-                $validator = Validator::make($request->all(), [
-                    'photo' => 'required|mimes:jpeg,jpg,png,tiff|max:5000', //Adjust max file size as needed
-                ]);
+                    $validator = Validator::make($request->all(), [
+                        'photo' => 'required|mimes:jpeg,jpg,png,tiff|max:5000', //Adjust max file size as needed
+                    ]);
 
-                if ($validator->fails()) {
-                    $data = [
-                        'status' => 422,
-                        'message' => $validator->messages()
-                    ];
-                    return response()->json($data, 422);
-                } else {
-                    Storage::delete($program->photo);
-                    $path = $request->file('photo')->store('public/images');
-                    $program->photo = $path;
-                }
+                    if ($validator->fails()) {
+                        $data = [
+                            'status' => 422,
+                            'message' => $validator->messages()
+                        ];
+                        return response()->json($data, 422);
+                    } else {
+                        Storage::delete($program->photo);
+                        $path = $request->file('photo')->store('public/images');
+                        $program->photo = $path;
+                    }
                 }
                 $program->name = $request->name;
                 $program->description = $request->description;
@@ -375,51 +358,45 @@ class ProgramController extends Controller
             ->join('program_courses', 'courses.id', '=', 'program_courses.course_id')
             ->where('program_courses.program_id', $programId)->get();
 
-            $program->courses = $courses;
-            $program->photo = asset('storage/' . substr($program->photo, 7));
+        $program->courses = $courses;
+        $program->photo = asset('storage/' . substr($program->photo, 7));
 
-            $data = [
-                'status' => 200,
-                'program' => $program
-            ];
-            return response()->json($data, 200);
-        
+        $data = [
+            'status' => 200,
+            'program' => $program
+        ];
+        return response()->json($data, 200);
+
     }
 
     // Enroll into a program
     public function registerProgram($programId)
     {
-        // Verify connection
-        if (!isset ($_SESSION['student'])) {
+        $user = Auth::user()->id;
+
+        // register
+        $registered = Enrollment::where('user_id', $user)
+            ->where('program_id', $programId)->get();
+
+        if ($registered->isEmpty()) {
+            $enrollment = new Enrollment();
+
+            $enrollment->program_id = $programId;
+            $enrollment->user_id = $user;
+
+            $enrollment->save();
+
             $data = [
-                'status' => 400,
-                'message' => 'User not connected'
+                'status' => 200,
+                'message' => 'Registration is successfull.'
             ];
-            return response()->json($data, 400);
-        } else { // register
-            $registered = Enrollment::where('user_id', $_SESSION['student'])
-                ->where('program_id', $programId)->get();
-
-            if ($registered->isEmpty()) {
-                $enrollment = new Enrollment();
-
-                $enrollment->program_id = $programId;
-                $enrollment->user_id = $_SESSION['student'];
-
-                $enrollment->save();
-
-                $data = [
-                    'status' => 200,
-                    'message' => 'Registration is successfull.'
-                ];
-                return response()->json($data, 200);
-            } else {
-                $data = [
-                    'status' => 401,
-                    'message' => 'Already registered in this program.'
-                ];
-                return response()->json($data, 401);
-            }
+            return response()->json($data, 200);
+        } else {
+            $data = [
+                'status' => 401,
+                'message' => 'Already registered in this program.'
+            ];
+            return response()->json($data, 401);
         }
     }
 
@@ -427,22 +404,17 @@ class ProgramController extends Controller
     public function enrolledPrograms()
     {
         // Verify connection
-        if (!isset ($_SESSION['student'])) {
-            $data = [
-                'status' => 400,
-                'message' => 'User not connected'
-            ];
-            return response()->json($data, 400);
-        } else {
-            $programs = Program::select('programs.*')
-                ->join('enrollments', 'programs.id', '=', 'enrollments.program_id')
-                ->where('user_id', $_SESSION['student'])
-                ->get();
-            $data = [
-                'status' => 200,
-                'programs' => $programs
-            ];
-            return response()->json($data, 200);
-        }
+        $user = Auth::user()->id;
+
+        $programs = Program::select('programs.*')
+            ->join('enrollments', 'programs.id', '=', 'enrollments.program_id')
+            ->where('user_id', $user)
+            ->get();
+        $data = [
+            'status' => 200,
+            'programs' => $programs
+        ];
+        return response()->json($data, 200);
+
     }
 }

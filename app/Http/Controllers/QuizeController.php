@@ -9,6 +9,8 @@ use App\Models\Option;
 use App\Models\Quize;
 use Illuminate\Support\Facades\Storage;
 use Validator;
+use Illuminate\Support\Facades\Auth;
+
 
 class QuizeController extends Controller
 {
@@ -17,12 +19,10 @@ class QuizeController extends Controller
 
     public function getUser()
     {
-        if (isset ($_SESSION['admin'])) {
-            $this->user = $_SESSION['admin'];
-        } else if (isset ($_SESSION['teacher'])) {
-            $this->user = $_SESSION['teacher'];
-        } else if (isset ($_SESSION['student'])) {
-            $this->user = $_SESSION['student'];
+        $u = Auth::user();
+
+        if ($u) {
+            $this->user = $u->id;
         } else {
             $data = [
                 'status' => 400,
@@ -38,19 +38,19 @@ class QuizeController extends Controller
     {
 
         $quize = Quize::with('content', 'questions.options') // Load relationships
-    ->findOrFail($quizeId);
+            ->findOrFail($quizeId);
 
         foreach ($quize->questions as $question) {
             $question->imageUrl = asset('storage/' . substr($question->imageUrl, 7));
-            
-            foreach($question->options as $option){
-                if($option->type=="image"){
-                $option->data = asset('storage/' . substr($option->data, 7));
+
+            foreach ($question->options as $option) {
+                if ($option->type == "image") {
+                    $option->data = asset('storage/' . substr($option->data, 7));
                 }
             }
         }
 
-        $quize->title=$quize->content->title;
+        $quize->title = $quize->content->title;
         $data = [
             'status' => 200,
             'quize' => $quize
@@ -65,13 +65,13 @@ class QuizeController extends Controller
         $question = Question::with('options') // Load relationships
             ->findOrFail($questionId);
 
-        if($question->imageUrl!=null)
+        if ($question->imageUrl != null)
             $question->imageUrl = asset('storage/' . substr($question->imageUrl, 7));
         else
             $question->imageUrl = "";
 
-        foreach($question->options as $option){
-            if($option->type=="image"){
+        foreach ($question->options as $option) {
+            if ($option->type == "image") {
                 $option->data = asset('storage/' . substr($option->data, 7));
             }
         }
@@ -97,25 +97,25 @@ class QuizeController extends Controller
             ];
             return response()->json($data, 422);
         } else {
-            
-                // create question and choices
-                $question = new Question();
 
-                if ($request->hasFile('imageUrl')) {
-                    $path = $request->file('imageUrl')->store('public/images');
-                    $question->imageUrl = $path;
-                }
-                $question->quize_id = $id;
-                $question->context = $request->context;
-                $question->save();
+            // create question and choices
+            $question = new Question();
 
-                $data = [
-                    'status' => 200,
-                    'message' => 'Question successfully created!',
-                    'id' => $question->id
-                ];
-                return response()->json($data, 200);
-            
+            if ($request->hasFile('imageUrl')) {
+                $path = $request->file('imageUrl')->store('public/images');
+                $question->imageUrl = $path;
+            }
+            $question->quize_id = $id;
+            $question->context = $request->context;
+            $question->save();
+
+            $data = [
+                'status' => 200,
+                'message' => 'Question successfully created!',
+                'id' => $question->id
+            ];
+            return response()->json($data, 200);
+
         }
     }
 
@@ -132,103 +132,103 @@ class QuizeController extends Controller
             ];
             return response()->json($data, 422);
         } else {
-            
-                $question = Question::find($id);
 
-                if ($request->hasFile('imageUrl')) {
-                    if ($question->imageUrl != null) {
-                        Storage::delete($question->imageUrl);
-                    }
-                    $path = $request->file('imageUrl')->store('public/images');
-                    $question->imageUrl = $path;
+            $question = Question::find($id);
+
+            if ($request->hasFile('imageUrl')) {
+                if ($question->imageUrl != null) {
+                    Storage::delete($question->imageUrl);
                 }
-                $question->context = $request->context;
-                $question->save();
+                $path = $request->file('imageUrl')->store('public/images');
+                $question->imageUrl = $path;
+            }
+            $question->context = $request->context;
+            $question->save();
 
-                $data = [
-                    'status' => 200,
-                    'message' => 'Question successfully updated!'
-                ];
-                return response()->json($data, 200);
+            $data = [
+                'status' => 200,
+                'message' => 'Question successfully updated!'
+            ];
+            return response()->json($data, 200);
         }
     }
 
     // Create option
     public function createOption(Request $request, $id)
     {
-            // create option
-            $option = new Option();
+        // create option
+        $option = new Option();
 
-            if ($request->hasFile('image')) {
-                $path = $request->file('image')->store('public/images');
-                $option->data = $path;
-                $option->type = 'image';
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('public/images');
+            $option->data = $path;
+            $option->type = 'image';
+        } else {
+            $validator = Validator::make($request->all(), [
+                "data" => "required"
+            ]);
+            if ($validator->fails()) {
+                $data = [
+                    'status' => 422,
+                    'message' => $validator->messages()
+                ];
+                return response()->json($data, 422);
             } else {
-                $validator = Validator::make($request->all(), [
-                    "data" => "required"
-                ]);
-                if ($validator->fails()) {
-                    $data = [
-                        'status' => 422,
-                        'message' => $validator->messages()
-                    ];
-                    return response()->json($data, 422);
-                } else {
-                    $option->data = $request->data;
-                    $option->type = 'text';
-                }
+                $option->data = $request->data;
+                $option->type = 'text';
             }
-            $option->question_id = $id;
-            $option->isCorrect = $request->isCorrect;
-            $option->weight = 0;
-            if( $request->isCorrect)
-                $option->weight = 1;
-            $option->save();
+        }
+        $option->question_id = $id;
+        $option->isCorrect = $request->isCorrect;
+        $option->weight = 0;
+        if ($request->isCorrect)
+            $option->weight = 1;
+        $option->save();
 
-            $data = [
-                'status' => 200,
-                'message' => 'Option successfully created!'
-            ];
-            return response()->json($data, 200);
-        
+        $data = [
+            'status' => 200,
+            'message' => 'Option successfully created!'
+        ];
+        return response()->json($data, 200);
+
     }
 
     // Update option
     public function updateOption(Request $request, $id)
     {
-        
-            // find option
-            $option = Option::find($id);
-            if ($request->hasFile('data')) {
-                Storage::delete($option->data);
-                $path = $request->file('data')->store('public/images');
-                $option->data = $path;
-                $option->type = 'image';
-            } else {
-                $validator = Validator::make($request->all(), [
-                    "data" => "required"
-                ]);
-                if ($validator->fails()) {
-                    $data = [
-                        'status' => 422,
-                        'message' => $validator->messages()
-                    ];
-                    return response()->json($data, 422);
-                } else {
-                    $option->data = $request->data;
-                    $option->type = 'text';
-                }
-            }
-            $option->isCorrect = $request->isCorrect;
-            $option->weight = $request->weight;
-            $option->save();
 
-            $data = [
-                'status' => 200,
-                'message' => 'Option successfully updated!'
-            ];
-            return response()->json($data, 200);
-        
+        // find option
+        $option = Option::find($id);
+        if ($request->hasFile('data')) {
+            Storage::delete($option->data);
+            $path = $request->file('data')->store('public/images');
+            $option->data = $path;
+            $option->type = 'image';
+        } else {
+            $validator = Validator::make($request->all(), [
+                "data" => "required"
+            ]);
+            if ($validator->fails()) {
+                $data = [
+                    'status' => 422,
+                    'message' => $validator->messages()
+                ];
+                return response()->json($data, 422);
+            } else {
+                $option->data = $request->data;
+                $option->type = 'text';
+            }
+        }
+        $option->isCorrect = $request->isCorrect;
+        $option->weight = $request->weight;
+        $option->save();
+
+        $data = [
+            'status' => 200,
+            'message' => 'Option successfully updated!'
+        ];
+        return response()->json($data, 200);
+
     }
 
     // delete quetion
@@ -285,7 +285,7 @@ class QuizeController extends Controller
 
     // Register marks obtained by user on a partucular quize
     public function registerMarkObtained(Request $request, $id)
-    {   
+    {
         Quize::findOrFail($id);
         $mark = Mark::where('user_id', '=', $this->getUser())->where('quize_id', '=', $id)->first();
         if (!$mark) {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\ModuleController;
 use Illuminate\Http\Request;
@@ -26,61 +27,67 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-//Only for production
-$_SESSION['admin'] = 1;
-//$_SESSION['teacher']=2;
-$_SESSION['student'] = 3;
+// Auth
+Route::post('auth/register', [AuthController::class, 'createUser']);
+Route::post('auth/update/{id}', [AuthController::class, 'updateUser']);
+Route::post('auth/login', [AuthController::class, 'loginUser']);
+Route::post('auth/reset', [AuthController::class, 'resetPassword'])->middleware('auth:sanctum');
+Route::post('auth/logout', [AuthController::class, 'logoutUser'])->middleware('auth:sanctum');
 
 // user
-Route::post('user', [UserController::class, 'store']);
-Route::get('teachers', [UserController::class, 'getTeachers']);
+// Route::post('user', [UserController::class, 'store']);
+Route::get('teachers', [UserController::class, 'getTeachers'])->middleware('auth:sanctum');
+Route::get('users', [UserController::class, 'getUsers'])->middleware('auth:sanctum');
+Route::get('user', [UserController::class, 'getUser'])->middleware('auth:sanctum');
+Route::post('user', [UserController::class, 'updateUser'])->middleware('auth:sanctum');
+
 
 //program
 Route::get('programs', [ProgramController::class, 'index']);
 Route::get('program/{id}', [ProgramController::class, 'getProgramById']);
-Route::get('admin/programs', [ProgramController::class, 'getAdminPrograms']); // can be achived or not
+Route::get('admin/programs', [ProgramController::class, 'getAdminPrograms'])->middleware('auth:sanctum'); // can be achived or not
 Route::post('program/edit/{id}', [ProgramController::class, 'update']);
 Route::put('program/enable/{id}', [ProgramController::class, 'updateStatus']);
 Route::get('program/restore/{id}', [ProgramController::class, 'restoreProgram']); // retrieves deleted program
 Route::delete('program/delete/{id}', [ProgramController::class, 'destroy']);
-Route::delete('program/destroy/{id}', [ProgramController::class, 'destroyPermanent']);
-Route::post('program', [ProgramController::class, 'store']);
+Route::delete('program/destroy/{id}', [ProgramController::class, 'destroyPermanent'])->middleware('auth:sanctum');
+Route::post('program', [ProgramController::class, 'store'])->middleware('auth:sanctum');
 Route::post('program/add/course', [ProgramController::class, 'addProgramCourse']);
 Route::delete('program/delete/{courseId}/{programId}', [ProgramController::class, 'removeProgramCourse']);
-Route::get('program/courses/{id}', [ProgramController::class, 'listProgramCourses']);
-Route::get('program/register/{id}', [ProgramController::class, 'registerProgram']);
-Route::get('programs/enrolled', [ProgramController::class, 'enrolledPrograms']);
+Route::get('program/courses/{id}', [ProgramController::class, 'listProgramCourses'])->middleware('auth:sanctum');
+Route::get('program/register/{id}', [ProgramController::class, 'registerProgram'])->middleware('auth:sanctum');
+Route::get('programs/enrolled', [ProgramController::class, 'enrolledPrograms'])->middleware('auth:sanctum');
 
 
 //course
 Route::get('courses', [CourseController::class, 'index']);
 Route::get('course/{id}', [CourseController::class, 'getCourseById']);
-Route::get('courses/manage', [CourseController::class, 'manageCourses']);
-Route::get('courses/manage/{programId}', [CourseController::class, 'manageCoursesEx']);
-Route::get('courses/enrolled', [CourseController::class, 'enrolledCourses']);
+Route::get('courses/manage', [CourseController::class, 'manageCourses'])->middleware('auth:sanctum');
+Route::get('courses/manage/{programId}', [CourseController::class, 'manageCoursesEx'])->middleware('auth:sanctum');
+Route::get('courses/enrolled', [CourseController::class, 'enrolledCourses'])->middleware('auth:sanctum');
 Route::get('course/restore/{id}', [CourseController::class, 'restoreCourse']); // retrieves deleted course
-Route::post('course', [CourseController::class, 'store']);
-Route::post('course/edit/{id}', [CourseController::class, 'update']);
-Route::put('course/enable/{id}', [CourseController::class, 'updateStatus']);
-Route::put('course/completed/{id}', [CourseController::class, 'markCompleted']);
-Route::delete('course/delete/{id}', [CourseController::class, 'destroy']);
-Route::delete('course/destroy/{id}', [CourseController::class, 'destroyPermanent']);
-Route::post('course/add/module', [CourseController::class, 'addCourseModule']);
-Route::delete('course/delete/{courseId}/{moduleId}', [CourseController::class, 'removeCourseModule']);
+Route::post('course', [CourseController::class, 'store'])->middleware('auth:sanctum');
+Route::post('course/edit/{id}', [CourseController::class, 'update'])->middleware('auth:sanctum');
+Route::put('course/enable/{id}', [CourseController::class, 'updateStatus'])->middleware('auth:sanctum');
+Route::put('course/completed/{id}', [CourseController::class, 'markCompleted'])->middleware('auth:sanctum');
+Route::delete('course/delete/{id}', [CourseController::class, 'destroy'])->middleware('auth:sanctum');
+Route::delete('course/destroy/{id}', [CourseController::class, 'destroyPermanent'])->middleware('auth:sanctum');
+Route::post('course/add/module', [CourseController::class, 'addCourseModule'])->middleware('auth:sanctum');
+Route::delete('course/delete/{courseId}/{moduleId}', [CourseController::class, 'removeCourseModule'])->middleware('auth:sanctum');
 Route::get('course/modules/{id}', [CourseController::class, 'listCourseModules']);
-Route::get('course/register/{id}', [CourseController::class, 'registerCourse']);
+Route::get('course/register/{id}', [CourseController::class, 'registerCourse'])->middleware('auth:sanctum');
 
 //module
-Route::get('modules', [ModuleController::class, 'index']); // not necesary
+Route::get('modules', [ModuleController::class, 'index']);
 Route::get('module/{id}', [ModuleController::class, 'getModuleById']);
-Route::get('modules/manage', [ModuleController::class, 'manageModules']);
-Route::get('modules/manage/{courseId}', [ModuleController::class, 'manageModulesEx']);
-Route::post('module', [ModuleController::class, 'store']);
-Route::post('module/edit/{id}', [ModuleController::class, 'update']);
-Route::delete('module/delete/{id}', [ModuleController::class, 'destroy']);
-Route::delete('module/destroy/{id}', [ModuleController::class, 'destroyPermanent']);
+Route::get('modules/manage', [ModuleController::class, 'manageModules'])->middleware('auth:sanctum');
+Route::get('modules/manage/{courseId}', [ModuleController::class, 'manageModulesEx'])->middleware('auth:sanctum');
+Route::post('module', [ModuleController::class, 'store'])->middleware('auth:sanctum');
+Route::post('module/edit/{id}', [ModuleController::class, 'update'])->middleware('auth:sanctum');
+Route::delete('module/delete/{id}', [ModuleController::class, 'destroy'])->middleware('auth:sanctum');
+Route::delete('module/destroy/{id}', [ModuleController::class, 'destroyPermanent'])->middleware('auth:sanctum');
 Route::get('module/restore/{id}', [ModuleController::class, 'restoreModule']);
-Route::get('module/contents/{id}', [ModuleController::class, 'getModuleContents']); // to be done
+Route::get('module/contents/{id}', [ModuleController::class, 'getModuleContents'])->middleware('auth:sanctum'); // to be done
 
 //content
 Route::get('content/{id}', [ContentController::class, 'getContentById']);
@@ -97,23 +104,24 @@ Route::put('content/text/edit/{id}', [ContentController::class, 'updateText']);
 Route::put('content/quize/edit/{id}', [ContentController::class, 'updateQuize']);
 
 // quize
-Route::post('question/{id}', [QuizeController::class, 'createQuestion']);
-Route::post('option/{id}', [QuizeController::class, 'createOption']);
-Route::post('quize/question/{id}', [QuizeController::class, 'updateQuestion']);
-Route::post('quize/option/{id}', [QuizeController::class, 'updateOption']);
-Route::delete('quize/question/{id}', [QuizeController::class, 'deleteQuestion']);
-Route::delete('quize/option/{id}', [QuizeController::class, 'deleteOption']);
-Route::get('quize/questions/{id}', [QuizeController::class, 'index']);
-Route::get('question/{id}', [QuizeController::class, 'getQuestion']);
-Route::post('quize/marks/{id}', [QuizeController::class, 'registerMarkObtained']);
+Route::post('question/{id}', [QuizeController::class, 'createQuestion'])->middleware('auth:sanctum');
+Route::post('option/{id}', [QuizeController::class, 'createOption'])->middleware('auth:sanctum');
+Route::post('quize/question/{id}', [QuizeController::class, 'updateQuestion'])->middleware('auth:sanctum');
+Route::post('quize/option/{id}', [QuizeController::class, 'updateOption'])->middleware('auth:sanctum');
+Route::delete('quize/question/{id}', [QuizeController::class, 'deleteQuestion'])->middleware('auth:sanctum');
+Route::delete('quize/option/{id}', [QuizeController::class, 'deleteOption'])->middleware('auth:sanctum');
+Route::get('quize/questions/{id}', [QuizeController::class, 'index'])->middleware('auth:sanctum');
+Route::get('question/{id}', [QuizeController::class, 'getQuestion'])->middleware('auth:sanctum');
+Route::post('quize/marks/{id}', [QuizeController::class, 'registerMarkObtained'])->middleware('auth:sanctum');
 
 // Discussions
 Route::get('discussion/{id}', [PostController::class, 'index']);
-Route::post('discussion/post/{id}', [PostController::class, 'store']);
-Route::delete('discussion/post/{id}', [PostController::class, 'delete']);
+Route::post('discussion/post/{id}', [PostController::class, 'store'])->middleware('auth:sanctum');
+Route::delete('discussion/post/{id}', [PostController::class, 'delete'])->middleware('auth:sanctum');
 // Messages
-Route::get('message/chat/{id}', [MessageController::class, 'index']);
-Route::post('message/send', [MessageController::class, 'store']);
-Route::delete('message/{id}', [MessageController::class, 'destroy']);
-Route::post('message/like/{id}', [MessageController::class, 'likeMessage']);
-Route::delete('message/unlike/{id}', [MessageController::class, 'removeLike']);
+Route::get('message/chat/{id}', [MessageController::class, 'index'])->middleware('auth:sanctum');
+Route::get('message/chats', [MessageController::class, 'getChats'])->middleware('auth:sanctum');
+Route::post('message/send', [MessageController::class, 'store'])->middleware('auth:sanctum');
+Route::delete('message/{id}', [MessageController::class, 'destroy'])->middleware('auth:sanctum');
+Route::post('message/like/{id}', [MessageController::class, 'likeMessage'])->middleware('auth:sanctum');
+Route::delete('message/unlike/{id}', [MessageController::class, 'removeLike'])->middleware('auth:sanctum');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Post;
 use App\Models\Discussion;
+use Illuminate\Support\Facades\Auth;
 use Validator;
 
 class PostController extends Controller
@@ -50,12 +51,9 @@ class PostController extends Controller
                 ];
                 return response()->json($data, 404);
             } else {
-                if (isset ($_SESSION['admin'])) {
-                    $user = $_SESSION['admin'];
-                } else if (isset ($_SESSION['teacher'])) {
-                    $user = $_SESSION['teacher'];
-                } else if (isset ($_SESSION['student'])) {
-                    $user = $_SESSION['student'];
+                $u = Auth::user();
+                if ($u) {
+                    $user = $u->id;
                 } else {
                     $data = [
                         'status' => 400,
