@@ -29,6 +29,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 // Auth
 Route::post('auth/register', [AuthController::class, 'createUser']);
+Route::post('auth/admin/register', [AuthController::class, 'createAdminUser'])->middleware('auth:sanctum');
 Route::post('auth/update/{id}', [AuthController::class, 'updateUser']);
 Route::post('auth/login', [AuthController::class, 'loginUser']);
 Route::post('auth/reset', [AuthController::class, 'resetPassword'])->middleware('auth:sanctum');
@@ -40,6 +41,15 @@ Route::get('teachers', [UserController::class, 'getTeachers'])->middleware('auth
 Route::get('users', [UserController::class, 'getUsers'])->middleware('auth:sanctum');
 Route::get('user', [UserController::class, 'getUser'])->middleware('auth:sanctum');
 Route::post('user', [UserController::class, 'updateUser'])->middleware('auth:sanctum');
+Route::get('admin/users', [UserController::class, 'getAdminUsers'])->middleware('auth:sanctum');
+Route::delete('user/delete/{id}', [UserController::class, 'destroy']);
+Route::delete('user/destroy/{id}', [UserController::class, 'destroyPermanent'])->middleware('auth:sanctum');
+Route::put('user/enable/{id}', [UserController::class, 'updateStatus']);
+Route::get('user/restore/{id}', [UserController::class, 'restoreUser']);
+Route::post('user/add/course', [UserController::class, 'addUserCourse']);
+Route::delete('user/delete/{courseId}/{userId}', [UserController::class, 'removeUserCourse']);
+Route::get('user/courses/{id}', [UserController::class, 'listUserCourses'])->middleware('auth:sanctum');
+Route::get('user/select/courses/{id}', [UserController::class, 'listCourses'])->middleware('auth:sanctum');
 
 
 //program

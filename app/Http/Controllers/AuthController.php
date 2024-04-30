@@ -61,15 +61,59 @@ class AuthController extends Controller
             $user->surname = $request->surname;
             $user->email = $request->email;
             $user->role = $request->role;
-            $user->supervisor = $request->supervisor;
             $user->password = $request->password;
             $user->date_of_birth = $request->date_of_birth;
             $user->save();
 
             return response()->json([
                 'status' => true,
-                'message' => 'User Created Successfully',
-                'token' => $user->createToken("API TOKEN")->plainTextToken
+                'message' => 'User Created Successfully'
+            ], 200);
+
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => $th->getMessage()
+            ], 500);
+        }
+    }
+
+
+    public function createAdminUser(Request $request)
+    {
+        try {
+            //Validated
+            $validateUser = Validator::make(
+                $request->all(),
+                [
+                    'name' => 'required',
+                    'email' => 'required|email|unique:users,email',
+                    'password' => 'required',
+                    'role' => 'required',
+                ]
+            );
+
+            if ($validateUser->fails()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'validation error',
+                    'errors' => $validateUser->errors()
+                ], 401);
+            }
+
+            $user = new User;
+
+            $user->supervisor = $request->user()->id;
+            $user->name = $request->name;
+            $user->surname = $request->surname;
+            $user->email = $request->email;
+            $user->role = $request->role;
+            $user->password = $request->password;
+            $user->save();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Admin User Created Successfully'
             ], 200);
 
         } catch (\Throwable $th) {
