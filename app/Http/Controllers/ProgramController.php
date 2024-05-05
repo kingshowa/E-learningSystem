@@ -6,10 +6,15 @@ use App\Models\ProgramCourse;
 use Illuminate\Http\Request;
 use App\Models\Program;
 use App\Models\Course;
+use App\Models\CourseProgress;
+use App\Models\ProgramProgress;
+
+use App\Models\User;
 use App\Models\Enrollment;
 use Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 
 class ProgramController extends Controller
@@ -18,6 +23,10 @@ class ProgramController extends Controller
     public function index()
     {
         $programs = Program::where("enabled", true)->get();
+
+        foreach ($programs as $program) {
+            $program->photo = asset('storage/' . substr($program->photo, 7));
+        }
 
         $data = [
             'status' => 200,
@@ -38,6 +47,22 @@ class ProgramController extends Controller
             ];
             return response()->json($data, 400);
         } else {
+            $program->photo = asset('storage/' . substr($program->photo, 7));
+
+            $user = User::find($program->creator);
+            $program->teacher = $user;
+
+            $courses = Program::select('programs.id', 'programs.name', DB::raw('COUNT(courses.id) as total_courses'))
+                ->where('programs.id', $id)
+                ->join('program_courses', 'programs.id', '=', 'program_courses.program_id')
+                ->join('courses', 'program_courses.course_id', '=', 'courses.id')
+                ->groupBy('programs.id', 'programs.name')
+                ->first();
+            if($courses)
+                $program->courses = $courses->total_courses;
+            else
+                $program->courses = 0;
+            
             $data = [
                 'status' => 200,
                 'program' => $program
@@ -369,6 +394,47 @@ class ProgramController extends Controller
 
     }
 
+
+    // List all courses in each program
+    public function listProgramsWithCourses()
+    {
+        $programs = Program::with('courses')->where('enabled', 1)->get();
+
+        foreach ($programs as $program) {
+                $program->photo = asset('storage/' . substr($program->photo, 7));
+
+            foreach ($program->courses as $course) {
+                $course->photo = asset('storage/' . substr($course->photo, 7));
+            }
+        }
+
+        
+        $coursesNotInPrograms = Course::where('enabled', 1)
+            ->whereNotIn('id', function ($query) {
+            $query->select('course_id')
+                ->from('program_courses');
+            })
+            ->get();
+
+        foreach ($coursesNotInPrograms as $course) {
+                $course->photo = asset('storage/' . substr($course->photo, 7));
+        }
+
+        $program1 = new Program();
+        $program1->id=0;
+        $program1->name='Single';
+        $program1->courses=$coursesNotInPrograms;
+
+        $programs->push($program1);
+
+        $data = [
+            'status' => 200,
+            'programs' => $programs
+        ];
+        return response()->json($data, 200);
+
+    }
+
     // Enroll into a program
     public function registerProgram($programId)
     {
@@ -386,9 +452,10 @@ class ProgramController extends Controller
 
             $enrollment->save();
 
+            
             $data = [
                 'status' => 200,
-                'message' => 'Registration is successfull.'
+                'message' => 'Program registration is successfull.'
             ];
             return response()->json($data, 200);
         } else {
@@ -403,16 +470,38 @@ class ProgramController extends Controller
     //List of enrolled programs by a student
     public function enrolledPrograms()
     {
-        // Verify connection
-        $user = Auth::user()->id;
+        $user = Auth::user();
 
-        $programs = Program::select('programs.*')
-            ->join('enrollments', 'programs.id', '=', 'enrollments.program_id')
-            ->where('user_id', $user)
+        $programs = Program::with(['courses'])
+            ->whereHas('enrollments', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
             ->get();
+
+        foreach ($programs as $program){
+            $program->progress = ProgramProgress::where('program_id', $program->id)->first()->overal_completion;
+
+            $program->photo = asset('storage/' . substr($program->photo, 7));
+
+            foreach ($program->courses as $course){
+                $course->progress = CourseProgress::where('course_id', $course->id)->first()->overal_completion;
+                $course->photo = asset('storage/' . substr($course->photo, 7));
+
+            }
+        }
+
+        $completedPrograms = $programs->filter(function ($program) {
+            return $program->progress >= 100; 
+        })->values();
+
+        $uncompletedPrograms = $programs->filter(function ($program) {
+            return $program->progress < 100; 
+        })->values();
+
         $data = [
             'status' => 200,
-            'programs' => $programs
+            'programs' => $uncompletedPrograms,
+            'completed_programs' => $completedPrograms
         ];
         return response()->json($data, 200);
 

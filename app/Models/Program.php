@@ -23,4 +23,9 @@ class Program extends Model
     {
         return $this->belongsToMany(Course::class, 'program_courses');
     }
+
+    public function enrollments()
+    {
+        return $this->hasMany(Enrollment::class);
+    }
 }

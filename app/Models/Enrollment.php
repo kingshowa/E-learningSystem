@@ -14,4 +14,14 @@ class Enrollment extends Model
         'course_id',
         'program_id'
     ];
+
+    public function program()
+    {
+        return $this->belongsTo(Program::class);
+    }
+
+    public function course()
+    {
+        return $this->belongsTo(Course::class);
+    }
 }

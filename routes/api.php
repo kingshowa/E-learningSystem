@@ -65,7 +65,8 @@ Route::post('program', [ProgramController::class, 'store'])->middleware('auth:sa
 Route::post('program/add/course', [ProgramController::class, 'addProgramCourse']);
 Route::delete('program/delete/{courseId}/{programId}', [ProgramController::class, 'removeProgramCourse']);
 Route::get('program/courses/{id}', [ProgramController::class, 'listProgramCourses'])->middleware('auth:sanctum');
-Route::get('program/register/{id}', [ProgramController::class, 'registerProgram'])->middleware('auth:sanctum');
+Route::get('programs/courses', [ProgramController::class, 'listProgramsWithCourses']);
+Route::post('program/register/{id}', [ProgramController::class, 'registerProgram'])->middleware('auth:sanctum');
 Route::get('programs/enrolled', [ProgramController::class, 'enrolledPrograms'])->middleware('auth:sanctum');
 
 
@@ -85,10 +86,11 @@ Route::delete('course/destroy/{id}', [CourseController::class, 'destroyPermanent
 Route::post('course/add/module', [CourseController::class, 'addCourseModule'])->middleware('auth:sanctum');
 Route::delete('course/delete/{courseId}/{moduleId}', [CourseController::class, 'removeCourseModule'])->middleware('auth:sanctum');
 Route::get('course/modules/{id}', [CourseController::class, 'listCourseModules']);
-Route::get('course/register/{id}', [CourseController::class, 'registerCourse'])->middleware('auth:sanctum');
+Route::post('course/register/{id}', [CourseController::class, 'registerCourse'])->middleware('auth:sanctum');
 
 //module
 Route::get('modules', [ModuleController::class, 'index']);
+Route::get('study/modules/{id}', [ModuleController::class, 'listCourseModules'])->middleware('auth:sanctum');
 Route::get('module/{id}', [ModuleController::class, 'getModuleById']);
 Route::get('modules/manage', [ModuleController::class, 'manageModules'])->middleware('auth:sanctum');
 Route::get('modules/manage/{courseId}', [ModuleController::class, 'manageModulesEx'])->middleware('auth:sanctum');
@@ -98,6 +100,7 @@ Route::delete('module/delete/{id}', [ModuleController::class, 'destroy'])->middl
 Route::delete('module/destroy/{id}', [ModuleController::class, 'destroyPermanent'])->middleware('auth:sanctum');
 Route::get('module/restore/{id}', [ModuleController::class, 'restoreModule']);
 Route::get('module/contents/{id}', [ModuleController::class, 'getModuleContents'])->middleware('auth:sanctum'); // to be done
+Route::get('study/module/{id}', [ModuleController::class, 'getStudyModuleContents'])->middleware('auth:sanctum'); // to be done
 
 //content
 Route::get('content/{id}', [ContentController::class, 'getContentById']);

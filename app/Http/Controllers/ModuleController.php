@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Module;
+use App\Models\ModuleProgress;
 use App\Models\Content;
 use App\Models\Course;
 use App\Models\CourseModule;
@@ -43,6 +44,44 @@ class ModuleController extends Controller
             return response()->json($data, 200);
         }
     }
+
+// List all modules in a particular course
+    public function listCourseModules($courseId)
+    {
+        $user = Auth::user()->id;
+        $course = Course::find($courseId); // test 
+
+        $courseModules = Module::select('modules.*')
+            ->join('course_modules', 'modules.id', '=', 'course_modules.module_id')
+            ->where('course_modules.course_id', $courseId)->get();
+
+        $foundActive=false;
+        foreach ($courseModules as $module){
+            $progress = ModuleProgress::where('course_id', $courseId)
+                ->where('user_id', $user)
+                ->where('module_id', $module->id)->first();
+            if($progress)
+                $module->progress = $progress->is_completed;
+            else if(!$foundActive){
+                $course->active_module=$module->id;
+                $foundActive=true;
+                $module->progress = 0;
+            }
+            else
+                $module->progress = 0;
+        }
+
+        $course->modules = $courseModules;
+
+
+        $data = [
+            'status' => 200,
+            'course' => $course,
+        ];
+
+        return response()->json($data, 200);
+    }
+
 
     public function manageModules(Request $request)
     {
@@ -291,6 +330,48 @@ class ModuleController extends Controller
             'status' => 200,
             'module' => $module,
             'courses' => $courses,
+        ];
+        return response()->json($data, 200);
+    }
+
+    // Get module contents
+    public function getStudyModuleContents($moduleId)
+    {
+        $user = Auth::user()->id;
+
+        $module = Module::find($moduleId); // test 
+
+        if ($module == null) {
+            $data = [
+                'status' => 404,
+                'message' => 'Parameter error!'
+            ];
+            return response()->json($data, 404);
+        }
+
+        $contents = Content::where('module_id', $moduleId)->get();
+        $moduleContents = [];
+
+        foreach ($contents as $content) {
+            $contentType = Content::select($content->type . 's.*', 'contents.type', 'title', 'duration')
+                ->join($content->type . 's', 'contents.id', '=', $content->type . 's.content_id')
+                ->where('content_id', $content->id)
+                ->get(); // Get the result of the query
+
+            // Check if any results are returned
+            if ($contentType->isNotEmpty()) {
+                $contentType->first()->link = asset('storage/' . substr($contentType->first()->link, 7));
+
+                // Push the first item (object) of the collection into $moduleContents
+                $moduleContents[] = $contentType->first();
+            }
+        }
+
+        $module->contents = $moduleContents;
+
+        $data = [
+            'status' => 200,
+            'module' => $module,
         ];
         return response()->json($data, 200);
     }

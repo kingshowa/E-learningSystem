@@ -9,6 +9,7 @@ use App\Models\Course;
 use App\Models\Module;
 use App\Models\User;
 use App\Models\CourseModule;
+use App\Models\CourseProgress;
 use App\Models\ProgramCourse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +32,10 @@ class CourseController extends Controller
             ];
             return response()->json($data, 400);
         } else {
+            foreach ($courses as $course) {
+                $course->photo = asset('storage/' . substr($course->photo, 7));
+            }
+
             $data = [
                 'status' => 200,
                 'courses' => $courses
@@ -51,6 +56,33 @@ class CourseController extends Controller
             ];
             return response()->json($data, 400);
         } else {
+            $course->photo = asset('storage/' . substr($course->photo, 7));
+
+            $assignedToUserId = $course->assigned_to ? $course->assigned_to : $course->creator;
+            $user = User::find($assignedToUserId);
+            $course->teacher = $user;
+            $duration = Course::select(DB::raw('SUM(modules.duration) as total_duration'))
+                ->where('courses.id', $id)
+                ->join('course_modules', 'courses.id', '=', 'course_modules.course_id')
+                ->join('modules', 'course_modules.module_id', '=', 'modules.id')
+                ->groupBy('courses.id', 'courses.name')
+                ->first();
+
+            if($duration)
+                $course->duration=$duration->total_duration;
+            else
+                $course->duration=0;
+            $modules = Course::select('courses.id', 'courses.name', DB::raw('COUNT(modules.id) as total_modules'))
+                ->where('courses.id', $id)
+                ->join('course_modules', 'courses.id', '=', 'course_modules.course_id')
+                ->join('modules', 'course_modules.module_id', '=', 'modules.id')
+                ->groupBy('courses.id', 'courses.name')
+                ->first();
+            if($modules)
+                $course->modules = $modules->total_modules;
+            else
+                $course->modules = 0;
+
             $data = [
                 'status' => 200,
                 'course' => $course
@@ -117,14 +149,30 @@ class CourseController extends Controller
     //List of enrolled courses by a student
     public function enrolledCourses()
     {
-        $user = Auth::user()->id;
+        $user = Auth::user();
 
         $courses = Course::select('courses.*')
             ->join('enrollments', 'courses.id', '=', 'enrollments.course_id')
-            ->where('enrollments.user_id', $user)->get();
+            ->where('enrollments.user_id', $user->id)->get();
+
+        foreach ($courses as $course){
+            $course->progress = CourseProgress::where('course_id', $course->id)->first()->overal_completion;
+            $course->photo = asset('storage/' . substr($course->photo, 7));
+        }
+
+        $completedCourses = $courses->filter(function ($course) {
+            return $course->progress >= 100; 
+        })->values();
+
+        $uncompletedCourses = $courses->filter(function ($course) {
+            return $course->progress < 100; 
+        })->values();
+
         $data = [
             'status' => 200,
-            'courses' => $courses
+            'courses' => $uncompletedCourses,
+            'completed_courses' => $completedCourses,
+            'user' => $user
         ];
         return response()->json($data, 200);
 
@@ -489,6 +537,36 @@ class CourseController extends Controller
 
         $course->modules = $courseModules;
         $course->photo = asset('storage/' . substr($course->photo, 7));
+
+
+
+        $assignedToUserId = $course->assigned_to ? $course->assigned_to : $course->creator;
+            $user = User::find($assignedToUserId);
+            $course->teacher = $user;
+            $duration = Course::select(DB::raw('SUM(modules.duration) as total_duration'))
+                ->where('courses.id', $courseId)
+                ->join('course_modules', 'courses.id', '=', 'course_modules.course_id')
+                ->join('modules', 'course_modules.module_id', '=', 'modules.id')
+                ->groupBy('courses.id', 'courses.name')
+                ->first();
+
+            if($duration)
+                $course->duration=$duration->total_duration;
+            else
+                $course->duration=0;
+            $t_modules = Course::select('courses.id', 'courses.name', DB::raw('COUNT(modules.id) as total_modules'))
+                ->where('courses.id', $courseId)
+                ->join('course_modules', 'courses.id', '=', 'course_modules.course_id')
+                ->join('modules', 'course_modules.module_id', '=', 'modules.id')
+                ->groupBy('courses.id', 'courses.name')
+                ->first();
+            if($t_modules)
+                $course->total_modules = $t_modules->total_modules;
+            else
+                $course->total_modules = 0;
+
+
+
         $data = [
             'status' => 200,
             'course' => $course,
@@ -516,7 +594,7 @@ class CourseController extends Controller
 
             $data = [
                 'status' => 200,
-                'message' => 'Registration is successfull.'
+                'message' => 'Course registration is successfull.'
             ];
             return response()->json($data, 200);
         } else {
