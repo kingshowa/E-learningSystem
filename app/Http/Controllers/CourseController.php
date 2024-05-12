@@ -226,9 +226,9 @@ class CourseController extends Controller
             $course->enabled = 0;
 
             if ($course->save()) {
-                $disc = new Discussion();
-                $disc->course_id = $course->id;
-                $disc->save();
+                // $disc = new Discussion(); // I created a trigger for this
+                // $disc->course_id = $course->id;
+                // $disc->save();
 
                 if ($request->has('program_id')) {
                     $programCourse = new ProgramCourse();

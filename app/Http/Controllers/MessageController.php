@@ -48,7 +48,9 @@ class MessageController extends Controller
         $messages = Message::whereRaw(
             '(sent_by = ? AND sent_to = ?) OR (sent_by = ? AND sent_to = ?)',
             [$receiver->id, $this->getUser(), $this->getUser(), $receiver->id]
-        )->get();
+        )
+        ->withCount('likes as total_likes')
+        ->get();
 
         foreach ($messages as $message) {
             if ($message->attachment != null) {
@@ -103,7 +105,7 @@ class MessageController extends Controller
         $i = 0;
         foreach ($users as $user) {
             $u = $user->id;
-            $lastMessage = Message::select('text', 'sent_by')
+            $lastMessage = Message::select('id', 'text', 'sent_by')
                 ->where(function ($query) use ($userId, $u) {
                     $query->where('sent_by', $userId)
                         ->where('sent_to', $u)
@@ -203,6 +205,35 @@ class MessageController extends Controller
             ];
             return response()->json($data, 200);
         }
+    }
+
+    // Delete message
+    public function destroyChat($patnerId)
+    {
+        $messages = Message::where(
+                function ($query) use ($patnerId) {
+                    $query->where('sent_to', $patnerId)
+                    ->where('sent_by', $this->getUser());
+            })
+            ->orWhere(
+                function ($query) use ($patnerId) {
+                    $query->where('sent_by', $patnerId)
+                ->where('sent_to', $this->getUser());
+            })
+            ->get();
+
+        foreach ($messages as $message){
+            if ($message->attachment != null) {
+                Storage::delete($message->attachment);
+            }
+            $message->delete();
+        }
+         
+            $data = [
+                'status' => 200,
+                'message' => 'The chat is Deleted'
+            ];
+            return response()->json($data, 200);
     }
 
     // like message

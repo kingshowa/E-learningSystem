@@ -224,12 +224,14 @@ class AuthController extends Controller
             }
 
             $user = User::where('email', $request->email)->first();
+            $user->photo = asset('storage/' . substr($user->photo, 7));
 
             return response()->json([
                 'status' => true,
                 'message' => 'User Logged In Successfully',
                 'token' => $user->createToken("API TOKEN")->plainTextToken,
-                'role' => $user->role
+                'role' => $user->role,
+                'user' => $user
             ], 200);
 
         } catch (\Throwable $th) {

@@ -7,6 +7,7 @@ use App\Models\Module;
 use App\Models\ModuleProgress;
 use App\Models\Content;
 use App\Models\Course;
+use App\Models\Mark;
 use App\Models\CourseModule;
 use Validator;
 use Illuminate\Support\Facades\DB;
@@ -56,6 +57,7 @@ class ModuleController extends Controller
             ->where('course_modules.course_id', $courseId)->get();
 
         $foundActive=false;
+        $index = 1;
         foreach ($courseModules as $module){
             $progress = ModuleProgress::where('course_id', $courseId)
                 ->where('user_id', $user)
@@ -64,11 +66,15 @@ class ModuleController extends Controller
                 $module->progress = $progress->is_completed;
             else if(!$foundActive){
                 $course->active_module=$module->id;
+                $course->index=$index;
+
                 $foundActive=true;
                 $module->progress = 0;
             }
             else
                 $module->progress = 0;
+
+            $index++;
         }
 
         $course->modules = $courseModules;
@@ -356,8 +362,17 @@ class ModuleController extends Controller
             $contentType = Content::select($content->type . 's.*', 'contents.type', 'title', 'duration')
                 ->join($content->type . 's', 'contents.id', '=', $content->type . 's.content_id')
                 ->where('content_id', $content->id)
-                ->get(); // Get the result of the query
+                ->get(); 
 
+            if($content->type == 'quize'){
+                $mark = Mark::select('mark_obtained')
+                    ->where('quize_id', $contentType->first()->id)
+                    ->where('user_id', $user)
+                    ->first();
+                $contentType->first()->previousMark = null;
+                if($mark)
+                    $contentType->first()->previousMark = $mark->mark_obtained;
+            }
             // Check if any results are returned
             if ($contentType->isNotEmpty()) {
                 $contentType->first()->link = asset('storage/' . substr($contentType->first()->link, 7));

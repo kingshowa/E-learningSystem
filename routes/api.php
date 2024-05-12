@@ -128,13 +128,15 @@ Route::get('question/{id}', [QuizeController::class, 'getQuestion'])->middleware
 Route::post('quize/marks/{id}', [QuizeController::class, 'registerMarkObtained'])->middleware('auth:sanctum');
 
 // Discussions
-Route::get('discussion/{id}', [PostController::class, 'index']);
+Route::get('discussion/{id}', [PostController::class, 'index'])->middleware('auth:sanctum');
+Route::get('post/messages/{id}', [PostController::class, 'getPostMessages'])->middleware('auth:sanctum');
 Route::post('discussion/post/{id}', [PostController::class, 'store'])->middleware('auth:sanctum');
-Route::delete('discussion/post/{id}', [PostController::class, 'delete'])->middleware('auth:sanctum');
+Route::delete('discussion/post/{id}', [PostController::class, 'destroy'])->middleware('auth:sanctum');
 // Messages
 Route::get('message/chat/{id}', [MessageController::class, 'index'])->middleware('auth:sanctum');
 Route::get('message/chats', [MessageController::class, 'getChats'])->middleware('auth:sanctum');
 Route::post('message/send', [MessageController::class, 'store'])->middleware('auth:sanctum');
 Route::delete('message/{id}', [MessageController::class, 'destroy'])->middleware('auth:sanctum');
+Route::delete('chat/{id}', [MessageController::class, 'destroyChat'])->middleware('auth:sanctum');
 Route::post('message/like/{id}', [MessageController::class, 'likeMessage'])->middleware('auth:sanctum');
-Route::delete('message/unlike/{id}', [MessageController::class, 'removeLike'])->middleware('auth:sanctum');
+Route::post('message/unlike/{id}', [MessageController::class, 'removeLike'])->middleware('auth:sanctum');

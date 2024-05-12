@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('questions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('quize_id')->constrained('quizes')->onDelete('cascade');
-            $table->string('context')->nullable();
+            $table->longText('context')->nullable();
             $table->string('imageUrl')->nullable();
             $table->timestamps();
         });

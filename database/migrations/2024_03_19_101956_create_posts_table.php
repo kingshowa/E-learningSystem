@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('posts', function (Blueprint $table) {
             $table->id();
-            $table->string('topic');
-            $table->foreignId('discussion_id');
+            $table->longText('topic');
+            $table->foreignId('course_id')->constrained('courses')->onDelete('cascade');
             $table->foreignId('created_by');
             $table->timestamps();
         });

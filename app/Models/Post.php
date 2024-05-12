@@ -10,7 +10,7 @@ class Post extends Model
     use HasFactory;
 
     protected $fillable = [
-        'discussin_id',
+        'course_id',
         'create_by',
         'topic',
     ];
@@ -20,8 +20,12 @@ class Post extends Model
         return $this->hasMany(Message::class);
     }
 
-    public function discussion()
+    public function course()
     {
-        return $this->belongsTo(Discussion::class);
+        return $this->belongsTo(Course::class);
+    }
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

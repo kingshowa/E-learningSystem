@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('messages', function (Blueprint $table) {
             $table->id();
-            $table->string('text')->nullable();
+            $table->longText('text')->nullable();
             $table->string('attachment')->nullable();
             $table->foreignId('post_id')->nullable();
             $table->foreignId('sent_by')->nullable();

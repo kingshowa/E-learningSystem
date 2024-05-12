@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('quizes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('content_id')->constrained('contents')->onDelete('cascade');
-            $table->string('instruction')->nullable();
+            $table->longText('instruction')->nullable();
             $table->double('pass_percentage')->nullable()->default(50);
             $table->timestamps();
         });

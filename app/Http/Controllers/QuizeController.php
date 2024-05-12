@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Mark;
 use App\Models\Question;
+use App\Models\ModuleProgress;
 use Illuminate\Http\Request;
 use App\Models\Option;
 use App\Models\Quize;
+use App\Models\Content;
 use Illuminate\Support\Facades\Storage;
 use Validator;
 use Illuminate\Support\Facades\Auth;
@@ -41,12 +43,14 @@ class QuizeController extends Controller
             ->findOrFail($quizeId);
 
         foreach ($quize->questions as $question) {
-            $question->imageUrl = asset('storage/' . substr($question->imageUrl, 7));
+            if($question->imageUrl)
+                $question->imageUrl = asset('storage/' . substr($question->imageUrl, 7));
 
             foreach ($question->options as $option) {
                 if ($option->type == "image") {
                     $option->data = asset('storage/' . substr($option->data, 7));
                 }
+                $option->answer = 0;
             }
         }
 
@@ -285,28 +289,75 @@ class QuizeController extends Controller
 
     // Register marks obtained by user on a partucular quize
     public function registerMarkObtained(Request $request, $id)
-    {
+    {   
         Quize::findOrFail($id);
+
+        $total_mark = 0;
+        $questions = $request->questions;
+        $length = count($questions);
+
+        foreach ($questions as $question){
+            $correct = true;
+            foreach ($question['options'] as $option){
+                if($option['answer'] != $option['isCorrect']){
+                    $correct=false;
+                }
+            }
+            if($correct){
+                $total_mark++;
+            }
+        }
+
+        $mark_obtained = ($total_mark / $length) * 100;
+
+        if($mark_obtained < $request->pass_percentage)
+            $remarks = "Oops! You obtained " . $mark_obtained . " % but you need " . $request->pass_percentage . " % to pass this exercise.";
+        else
+            $remarks = "Congratulations! You passed your test with " . $mark_obtained . "%";
+         
+        $total_quizes = Content::where('module_id', $request->content['module_id'])
+            ->where('type', 'quize')
+            ->count(); 
+
+        $quizes_done = Quize::whereIn('id', function ($query) {
+                $query->select('quize_id')
+                      ->from('marks')
+                      ->where('user_id', $this->getUser());
+            })->count();
+
+        if($total_quizes == $quizes_done){
+            $module_progress = new ModuleProgress();
+            $module_progress->user_id=$this->getUser();
+            $module_progress->module_id=$request->content['module_id'];
+            $module_progress->course_id=$request->course_id;
+            $module_progress->is_completed=1;
+            $module_progress->save();
+        }
+
         $mark = Mark::where('user_id', '=', $this->getUser())->where('quize_id', '=', $id)->first();
+
         if (!$mark) {
             $mark = new Mark();
             $mark->user_id = $this->getUser();
             $mark->quize_id = $id;
-            $mark->mark_obtained = $request->mark_obtained;
+            $mark->mark_obtained = $mark_obtained;
             $mark->attempts = 1;
             $mark->save();
+
             $data = [
                 'status' => 200,
-                'message' => 'Mark Saved'
+                'message' => 'Mark Saved',
+                'remarks' => $remarks,
             ];
             return response()->json($data, 200);
         } else {
-            $mark->mark_obtained = $request->mark_obtained;
+            $mark->mark_obtained = $mark_obtained;
             $mark->attempts = $mark->attempts + 1;
             $mark->save();
             $data = [
                 'status' => 200,
-                'message' => 'Mark updated'
+                'message' => 'Mark updated',
+                'remarks' => $remarks,
             ];
             return response()->json($data, 200);
         }

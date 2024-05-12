@@ -32,4 +32,9 @@ class Course extends Model
     {
         return $this->belongsToMany(Program::class, 'program_courses');
     }
+
+    public function posts()
+    {
+        return $this->hasMany(Post::class);
+    }
 }
