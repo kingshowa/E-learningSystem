@@ -6,6 +6,7 @@ use App\Models\Discussion;
 use App\Models\Enrollment;
 use Illuminate\Http\Request;
 use App\Models\Course;
+use App\Models\Program;
 use App\Models\Module;
 use App\Models\User;
 use App\Models\CourseModule;
@@ -154,6 +155,16 @@ class CourseController extends Controller
         $courses = Course::select('courses.*')
             ->join('enrollments', 'courses.id', '=', 'enrollments.course_id')
             ->where('enrollments.user_id', $user->id)->get();
+
+        $programs = Program::with(['courses'])
+            ->whereHas('enrollments', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->get();
+
+        foreach ($programs as $program){
+            $courses = $courses->merge($program->courses);
+        }
 
         foreach ($courses as $course){
             $course->progress = CourseProgress::where('course_id', $course->id)->first()->overal_completion;

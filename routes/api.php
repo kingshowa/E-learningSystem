@@ -11,6 +11,8 @@ use App\Http\Controllers\QuizeController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\CertificateController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -140,3 +142,7 @@ Route::delete('message/{id}', [MessageController::class, 'destroy'])->middleware
 Route::delete('chat/{id}', [MessageController::class, 'destroyChat'])->middleware('auth:sanctum');
 Route::post('message/like/{id}', [MessageController::class, 'likeMessage'])->middleware('auth:sanctum');
 Route::post('message/unlike/{id}', [MessageController::class, 'removeLike'])->middleware('auth:sanctum');
+
+// Certificate
+Route::get('certificate/{name}/{id}', [CertificateController::class, 'index'])->middleware('auth:sanctum');
+Route::get('certificate-verify/{id}', [CertificateController::class, 'verify']);

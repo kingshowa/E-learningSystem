@@ -5,6 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Mark;
 use App\Models\Question;
 use App\Models\ModuleProgress;
+use App\Models\CourseProgress;
+use App\Models\ProgramProgress;
+use App\Models\Certificate;
+
 use Illuminate\Http\Request;
 use App\Models\Option;
 use App\Models\Quize;
@@ -12,7 +16,8 @@ use App\Models\Content;
 use Illuminate\Support\Facades\Storage;
 use Validator;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class QuizeController extends Controller
 {
@@ -310,29 +315,25 @@ class QuizeController extends Controller
 
         $mark_obtained = ($total_mark / $length) * 100;
 
+        $passed=false;
         if($mark_obtained < $request->pass_percentage)
             $remarks = "Oops! You obtained " . $mark_obtained . " % but you need " . $request->pass_percentage . " % to pass this exercise.";
-        else
+        else{
             $remarks = "Congratulations! You passed your test with " . $mark_obtained . "%";
+            $passed=true;
+        }
          
         $total_quizes = Content::where('module_id', $request->content['module_id'])
             ->where('type', 'quize')
             ->count(); 
 
-        $quizes_done = Quize::whereIn('id', function ($query) {
+        $quizes_done = Quize::whereIn('id', function ($query) use ($id) {
                 $query->select('quize_id')
                       ->from('marks')
+                      ->where('quize_id', $id)
                       ->where('user_id', $this->getUser());
             })->count();
 
-        if($total_quizes == $quizes_done){
-            $module_progress = new ModuleProgress();
-            $module_progress->user_id=$this->getUser();
-            $module_progress->module_id=$request->content['module_id'];
-            $module_progress->course_id=$request->course_id;
-            $module_progress->is_completed=1;
-            $module_progress->save();
-        }
 
         $mark = Mark::where('user_id', '=', $this->getUser())->where('quize_id', '=', $id)->first();
 
@@ -344,23 +345,95 @@ class QuizeController extends Controller
             $mark->attempts = 1;
             $mark->save();
 
-            $data = [
-                'status' => 200,
-                'message' => 'Mark Saved',
-                'remarks' => $remarks,
-            ];
-            return response()->json($data, 200);
         } else {
             $mark->mark_obtained = $mark_obtained;
             $mark->attempts = $mark->attempts + 1;
             $mark->save();
-            $data = [
+            
+        }
+
+        $module_progress1 = ModuleProgress::where('user_id', $this->getUser())
+            ->where('module_id', $request->content['module_id'])
+            ->where('course_id', $request->course_id)
+            ->where('is_completed', 1)
+            ->first();
+
+        if($total_quizes == $quizes_done+1 && $passed == true && $module_progress1==null){
+            $module_progress = new ModuleProgress();
+            $module_progress->user_id=$this->getUser();
+            $module_progress->module_id=$request->content['module_id'];
+            $module_progress->course_id=$request->course_id;
+            $module_progress->is_completed=1;
+            $module_progress->save();
+        }
+
+        $certificate=Certificate::where('user_id', $this->getUser())
+        ->where('course_id', $request->course_id)
+        ->first();
+
+        $course_progress = CourseProgress::select('overal_completion')
+            ->where('user_id', $this->getUser())
+            ->where('course_id', $request->course_id)
+            ->first();
+
+        if($course_progress->overal_completion >= 100 && $certificate==null){
+            // create a random token
+            $token = Str::random(64);
+            while (Certificate::where('token', $token)->exists()) {
+                $token = Str::random(64);
+            }
+
+            $certificate = new Certificate();
+            $certificate->user_id = $this->getUser();
+            $certificate->course_id = $request->course_id;
+            $certificate->token = $token;
+            $certificate->save();
+        }
+
+
+
+        $programId = DB::table('programs as p')
+            ->join('program_courses as pc', 'p.id', '=', 'pc.program_id')
+            ->join('courses as c', 'pc.course_id', '=', 'c.id')
+            ->join('enrollments as e', 'p.id', '=', 'e.program_id')
+            ->where('c.id', '=', $request->course_id)
+            ->where('e.user_id', '=', $this->getUser())
+            ->pluck('p.id')
+            ->first();
+
+        if($programId){
+            $certificate1=Certificate::where('user_id', $this->getUser())
+                ->where('program_id', $programId)
+                ->first();
+
+            $program_progress = ProgramProgress::select('overal_completion')
+            ->where('user_id', $this->getUser())
+            ->where('program_id', $programId)
+            ->first();
+
+            if($program_progress->overal_completion >= 100 && $certificate1==null){
+                // create a random token
+                $token = Str::random(64);
+                while (Certificate::where('token', $token)->exists()) {
+                    $token = Str::random(64);
+                }
+
+                $certificate = new Certificate();
+                $certificate->user_id = $this->getUser();
+                $certificate->program_id = $programId;
+                $certificate->token = $token;
+                $certificate->save();
+            }
+        }
+
+        $data = [
                 'status' => 200,
-                'message' => 'Mark updated',
+                'message' => 'Mark saved',
                 'remarks' => $remarks,
+                'total_quizes' => $total_quizes,
+                'quizes_done' => $quizes_done,
             ];
             return response()->json($data, 200);
-        }
 
     }
 }
