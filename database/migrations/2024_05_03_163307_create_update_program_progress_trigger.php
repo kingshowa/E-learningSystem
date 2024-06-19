@@ -30,13 +30,15 @@ return new class extends Migration
                             FROM program_courses
                             WHERE course_id = NEW.course_id
                         )
-                    )
-                )
+                    ) AND user_id = NEW.user_id
+                ), 
+                updated_at = CURRENT_DATE()
                 WHERE program_id IN (
                     SELECT program_id
                     FROM program_courses
                     WHERE course_id = NEW.course_id
-                );
+                )
+                AND user_id = NEW.user_id;
             END
         ');
     }

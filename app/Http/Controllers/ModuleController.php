@@ -93,10 +93,30 @@ class ModuleController extends Controller
     {
         $user = Auth::user()->id;
 
+        $courses = Course::select('courses.*')
+            ->where('enabled', 1)
+            ->where(function ($query) use ($user) {
+                // Filter courses where the creator is the user OR assigned_to is the user
+                $query->where('creator', $user)
+                    ->orWhere('assigned_to', $user);
+            })
+            ->get();
+
+        $courseIds=[];
+        foreach ($courses as $course){
+            $courseIds[]= $course["id"];
+        }
+
         // deleted courses for a user
         $deleted_modules = Module::onlyTrashed()->where('creator', $user)->get();
 
-        $modules = Module::select('modules.*')
+        $modules1 = Module::select('modules.*')
+        ->join('course_modules', 'modules.id', '=', 'course_modules.module_id')
+        ->whereIn('course_id', $courseIds)
+        ->orWhere('modules.creator', $user)
+        ->distinct('module_id');
+
+        $modules2 = Module::select('modules.*')
             ->where(function ($query) use ($user) {
                 // Check if the user is a supervisor
                 $query->whereExists(function ($subquery) use ($user) {
@@ -106,8 +126,9 @@ class ModuleController extends Controller
                         ->where('users.supervisor', '=', $user);
                 })
                     ->orWhere('creator', $user); // Also include modules created by the user
-            })
-            ->get();
+            });
+
+        $modules = $modules1->union($modules2)->distinct('module_id')->get();
 
         $data = [
             'status' => 200,

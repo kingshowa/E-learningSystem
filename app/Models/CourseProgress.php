@@ -14,4 +14,9 @@ class CourseProgress extends Model
         'course_id',
         'overal_completion',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

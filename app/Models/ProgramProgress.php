@@ -14,4 +14,9 @@ class ProgramProgress extends Model
         'program_id',
         'overal_completion',
     ];
+
+    public function enrollment()
+    {
+        return $this->belongsTo(Enrollment::class);
+    }
 }

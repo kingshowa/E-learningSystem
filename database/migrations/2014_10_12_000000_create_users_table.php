@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('surname')->nullable();
             $table->string('photo')->nullable();
-            $table->date('date_of_birth')->nullable();
+            $table->string('phone')->nullable();
             $table->string('role')->nullable();
             $table->foreignId('supervisor')->nullable();
             $table->boolean('enabled')->default(true);

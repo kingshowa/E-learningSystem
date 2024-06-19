@@ -108,7 +108,7 @@ class UserController extends Controller
 
             $user->name = $request->name;
             $user->surname = $request->surname;
-            $user->date_of_birth = $request->date_of_birth;
+            $user->phone = $request->phone;
             $user->save();
 
             return response()->json([

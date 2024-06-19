@@ -12,7 +12,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\CertificateController;
-
+use App\Http\Controllers\AnalyticsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -146,3 +146,10 @@ Route::post('message/unlike/{id}', [MessageController::class, 'removeLike'])->mi
 // Certificate
 Route::get('certificate/{name}/{id}', [CertificateController::class, 'index'])->middleware('auth:sanctum');
 Route::get('certificate-verify/{id}', [CertificateController::class, 'verify']);
+
+// Analytics
+Route::get('admin/analytics', [AnalyticsController::class, 'adminAnalytics'])->middleware('auth:sanctum');
+Route::get('program/students/{programId}', [AnalyticsController::class, 'studentsEnrolledInProgram'])->middleware('auth:sanctum');
+Route::get('teacher/analytics', [AnalyticsController::class, 'teacherAnalytics'])->middleware('auth:sanctum');
+Route::get('course/students/{courseId}', [AnalyticsController::class, 'studentsEnrolledInCourse'])->middleware('auth:sanctum');
+

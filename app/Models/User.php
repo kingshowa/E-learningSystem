@@ -22,7 +22,7 @@ class User extends Authenticatable
         'name',
         'surname',
         'photo',
-        'date_of_birth',
+        'phone',
         'role',
         'supervisor',
         'enabled',
@@ -62,5 +62,15 @@ class User extends Authenticatable
     public function certificates()
     {
         return $this->hasMany(Certificate::class);
+    }
+
+    public function enrollments()
+    {
+        return $this->hasMany(Enrollment::class);
+    }
+
+    public function course_progress()
+    {
+        return $this->hasMany(CourseProgress::class);
     }
 }

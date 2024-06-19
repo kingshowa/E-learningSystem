@@ -37,7 +37,7 @@ return new class extends Migration
         END IF;
 
         -- Update the course_progress table
-        UPDATE course_progress SET overal_completion = overall_completion WHERE user_id = NEW.user_id AND course_id = NEW.course_id;
+        UPDATE course_progress SET overal_completion = overall_completion, updated_at = CURRENT_DATE() WHERE user_id = NEW.user_id AND course_id = NEW.course_id;
     END
 ');
 

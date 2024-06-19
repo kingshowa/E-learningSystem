@@ -20,19 +20,19 @@ return new class extends Migration
                 -- Check if the enrollment is for a course
                 IF NEW.course_id IS NOT NULL THEN
                     -- Initialize course progress
-                    INSERT INTO course_progress (user_id, course_id, overal_completion)
-                    VALUES (NEW.user_id, NEW.course_id, 0);
+                    INSERT INTO course_progress (user_id, course_id, overal_completion, created_at, updated_at)
+                    VALUES (NEW.user_id, NEW.course_id, 0, CURRENT_DATE(), CURRENT_DATE());
                 END IF;
 
                 -- Check if the enrollment is for a program
                 IF NEW.program_id IS NOT NULL THEN
                     -- Initialize program_progress
-                    INSERT INTO program_progress (user_id, program_id, overal_completion)
-                    VALUES (NEW.user_id, NEW.program_id, 0);
+                    INSERT INTO program_progress (user_id, program_id, overal_completion, created_at, updated_at)
+                    VALUES (NEW.user_id, NEW.program_id, 0, CURRENT_DATE(), CURRENT_DATE());
 
                     -- Initialize course_progress for each course in the program
-                    INSERT INTO course_progress (user_id, course_id, program_id, overal_completion)
-                    SELECT NEW.user_id, pc.course_id, pc.program_id, 0
+                    INSERT INTO course_progress (user_id, course_id, program_id, overal_completion, created_at, updated_at)
+                    SELECT NEW.user_id, pc.course_id, pc.program_id, 0, CURRENT_DATE(), CURRENT_DATE()
                     FROM program_courses pc
                     WHERE pc.program_id = NEW.program_id;
                 END IF;
