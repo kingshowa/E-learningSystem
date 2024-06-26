@@ -167,7 +167,9 @@ class CourseController extends Controller
         }
 
         foreach ($courses as $course){
-            $course->progress = CourseProgress::where('course_id', $course->id)->first()->overal_completion;
+            $course->progress = CourseProgress::where('course_id', $course->id)
+            ->where('user_id', $user->id)
+            ->first()->overal_completion;
             $course->photo = asset('storage/' . substr($course->photo, 7));
         }
 
@@ -594,6 +596,11 @@ class CourseController extends Controller
         // register
         $registered = Enrollment::where('user_id', $user)
             ->where('course_id', $courseId)->get();
+
+        if ($registered->isEmpty()){
+            $registered = CourseProgress::where('user_id', $user)
+            ->where('course_id', $courseId)->get();
+        }
 
         if ($registered->isEmpty()) {
             $enrollment = new Enrollment();

@@ -48,8 +48,9 @@ class QuizeController extends Controller
             ->findOrFail($quizeId);
 
         foreach ($quize->questions as $question) {
-            if($question->imageUrl)
+            if($question->imageUrl){
                 $question->imageUrl = asset('storage/' . substr($question->imageUrl, 7));
+            }
 
             foreach ($question->options as $option) {
                 if ($option->type == "image") {
@@ -327,12 +328,23 @@ class QuizeController extends Controller
             ->where('type', 'quize')
             ->count(); 
 
-        $quizes_done = Quize::whereIn('id', function ($query) use ($id) {
+        // $quizes_done = Quize::whereIn('id', function ($query) use ($id) {
+        //         $query->select('quize_id')
+        //               ->from('marks')
+        //               ->where('quize_id', $id)
+        //               ->where('user_id', $this->getUser());
+        //     })->count();
+
+            $pass_percentage = $request->pass_percentage;
+
+        $quizes_done = Quize::whereIn('id', function ($query) use ($id, $pass_percentage) {
                 $query->select('quize_id')
                       ->from('marks')
                       ->where('quize_id', $id)
-                      ->where('user_id', $this->getUser());
-            })->count();
+                      ->where('user_id', $this->getUser())
+                      ->where('mark_obtained', '>=', $pass_percentage);
+            })
+            ->count();
 
 
         $mark = Mark::where('user_id', '=', $this->getUser())->where('quize_id', '=', $id)->first();
@@ -358,7 +370,8 @@ class QuizeController extends Controller
             ->where('is_completed', 1)
             ->first();
 
-        if($total_quizes == $quizes_done+1 && $passed == true && $module_progress1==null){
+        if($mark){
+            if($total_quizes == $quizes_done && $passed == true && $module_progress1==null){
             $module_progress = new ModuleProgress();
             $module_progress->user_id=$this->getUser();
             $module_progress->module_id=$request->content['module_id'];
@@ -366,6 +379,19 @@ class QuizeController extends Controller
             $module_progress->is_completed=1;
             $module_progress->save();
         }
+
+        } else {
+            if($total_quizes == $quizes_done+1 && $passed == true && $module_progress1==null){
+            $module_progress = new ModuleProgress();
+            $module_progress->user_id=$this->getUser();
+            $module_progress->module_id=$request->content['module_id'];
+            $module_progress->course_id=$request->course_id;
+            $module_progress->is_completed=1;
+            $module_progress->save();
+        }
+        }
+
+        
 
         $certificate=Certificate::where('user_id', $this->getUser())
         ->where('course_id', $request->course_id)

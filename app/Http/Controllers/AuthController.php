@@ -62,7 +62,7 @@ class AuthController extends Controller
             $user->email = $request->email;
             $user->role = $request->role;
             $user->password = $request->password;
-            $user->date_of_birth = $request->date_of_birth;
+            $user->phone = $request->phone;
             $user->save();
 
             return response()->json([
@@ -175,7 +175,7 @@ class AuthController extends Controller
             $user->role = $request->role;
             $user->supervisor = $request->supervisor;
             $user->password = $request->password;
-            $user->date_of_birth = $request->date_of_birth;
+            $user->phone = $request->phone;
             $user->save();
 
             return response()->json([

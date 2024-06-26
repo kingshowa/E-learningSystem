@@ -64,6 +64,9 @@ class PostController extends Controller
                 $user=$message['sender'];
                 $photo=$user['photo'];
                 $message->sender['photo1'] = asset('storage/' . substr($photo, 7));
+                if ($message->attachment != null) {
+                    $message->attachment = asset('storage/' . substr($message->attachment, 7));
+                }
             }
 
         $data = [

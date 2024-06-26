@@ -479,12 +479,16 @@ class ProgramController extends Controller
             ->get();
 
         foreach ($programs as $program){
-            $program->progress = ProgramProgress::where('program_id', $program->id)->first()->overal_completion;
+            $program->progress = ProgramProgress::where('program_id', $program->id)
+            ->where('user_id', $user->id)
+            ->first()->overal_completion;
 
             $program->photo = asset('storage/' . substr($program->photo, 7));
 
             foreach ($program->courses as $course){
-                $course->progress = CourseProgress::where('course_id', $course->id)->first()->overal_completion;
+                $course->progress = CourseProgress::where('course_id', $course->id)
+                ->where('user_id', $user->id)
+                ->first()->overal_completion;
                 $course->photo = asset('storage/' . substr($course->photo, 7));
 
             }
